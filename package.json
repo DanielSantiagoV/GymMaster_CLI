@@ -1,0 +1,30 @@
+{
+  "name": "gymmaster_cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanielSantiagoV/GymMaster_CLI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/DanielSantiagoV/GymMaster_CLI/issues"
+  },
+  "homepage": "https://github.com/DanielSantiagoV/GymMaster_CLI#readme",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "dayjs": "^1.11.18",
+    "dotenv": "^17.2.2",
+    "inquirer": "^12.9.6",
+    "mongodb": "^6.20.0"
+  }
+}

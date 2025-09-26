@@ -1,0 +1,225 @@
+Contexto y Objetivo General
+El proyecto es una aplicación de línea de comandos orientada a un gimnasio o entrenador personal para manejar clientes, planes, progreso, alimentación y finanzas, con persistencia en MongoDB, uso de principios SOLID, patrones de diseño y librerías npm para UX. El enfoque es en calidad del código, robustez y funcionalidad integral.
+
+Especificación Detallada de Componentes y Prácticas
+1. Arquitectura y Programación Orientada a Objetos (POO)
+Divide la aplicación en clases con responsabilidades claras: Cliente, PlanEntrenamiento, Seguimiento, Nutricion, Contrato, Finanzas, etc.
+
+Aplica principios SOLID:
+
+S (Single Responsibility): Cada clase debe tener una sola responsabilidad clara.
+
+O (Open/Closed): Las clases deben estar abiertas a extensión, pero cerradas a modificación.
+
+L (Liskov Substitution): Las subclases deben poder sustituir a sus superclases sin alterar la funcionalidad.
+
+I (Interface Segregation): Divide interfaces grandes en interfaces específicas.
+
+D (Dependency Inversion): Depende de abstracciones, no de implementaciones concretas.
+
+Mantén métodos cortos y modulables para facilitar pruebas y mantenimiento.
+
+2. Patrones de Diseño Recomendados
+Repository: Para abstraer la persistencia de datos y separar la lógica MongoDB del negocio. Cada entidad (Cliente, Plan, etc.) tendrá su propio repositorio con métodos CRUD y operaciones específicas.
+
+Factory: Para crear objetos complejos como Contratos o Planes con configuraciones iniciales, facilitando mantenimiento y extensibilidad.
+
+Opcionalmente, Command para manejar comandos CLI y separar ejecución lógica.
+
+3. Librerías npm para Experiencia CLI
+Usa inquirer para formularios interactivos, validación básica y navegación amigable.
+
+Usa chalk para resaltar mensajes importantes, errores, éxito en colores, mejorando la UX visual.
+
+Usa dotenv para gestión de configuración sensible (conexión DB, parámetros).
+
+Usa dayjs para manejo y formato de fechas fácil y robusto.
+
+4. Persistencia y MongoDB
+Usa el driver oficial mongodb, no mongoose, para operaciones directas y control fino.
+
+Implementa transacciones MongoDB para operaciones críticas (ej. agregar contrato, pago, cancelación) para evitar inconsistencias.
+
+Crea una carpeta /models con definiciones claras de objetos JavaScript que representen esquemas, con validaciones explícitas:
+
+Validación por tipo (string, number, date)
+
+Campos requeridos
+
+Rangos y formatos (e.g., nivel de plan: "principiante", "intermedio", "avanzado")
+
+Usa índices en MongoDB para optimizar consultas frecuentes (clientes, planes activos, contratos vigentes).
+
+5. Funcionalidades Clave
+Gestión de Clientes
+Métodos para crear, listar, actualizar y eliminar clientes.
+
+Asociar planes con clientes usando IDs para referencias.
+
+Validación estricta para evitar duplicados o datos erróneos.
+
+Gestión de Planes de Entrenamiento
+Crear planes con atributos bien definidos.
+
+Asociar clientes y registrar contratos al asignar planes.
+
+Permitir controlar estados del plan (activo, cancelado, finalizado).
+
+Opciones para renovar planes, realizar cambios y actualizar fechas.
+
+Seguimiento Físico
+Registro periódico de métricas y comentarios.
+
+Control de historial para consultas cronológicas.
+
+Posibilidad de eliminar registros y ejecutar rollback si afecta la coherencia.
+
+Nutrición
+Planes alimenticios personalizados vinculados al cliente y plan.
+
+Registro diario de alimentos y calorías.
+
+Reportes semanales con cálculos básicos para seguimiento.
+
+Contratos
+Generación automática al asignar un plan.
+
+Campos claros y vinculaciones entre cliente y plan.
+
+Control de fechas y precios.
+
+Gestión Financiera
+Registro claro y clasificado de ingresos y egresos.
+
+Consultas flexibles por fecha o cliente.
+
+Uso de transacciones para consistencia en pagos y cancelaciones.
+
+6. Requisitos Especiales y Manejo de Errores
+La generación automática del contrato debe ser parte de la lógica al asignar un plan, implementado en el método correspondiente para mantener responsabilidad única.
+
+Al cancelar un plan, debe ejecutarse un rollback manual de los datos relacionados (seguimiento y contrato) usando transacciones MongoDB para mantener integridad.
+
+El código debe tener comentarios o estructuras que evidencien claramente las operaciones críticas y cómo se asegura la consistencia (ej. manejo de excepciones, rollback explícito).
+
+7. Organización y Manejo del Proyecto
+Estructura el proyecto con carpetas: /models, /repositories, /services (lógica de negocio), /cli (interfaces e interacción), /config (variables y conexión).
+
+Aplica módulos ES para mejorar claridad y separación.
+
+Guarda configuraciones sensibles en .env, accede con dotenv para seguridad.
+
+Realiza pruebas locales constantes para cada módulo antes de integración.
+
+Documenta funciones clave y flujos de trabajo para facilitar mantenimiento.
+
+Resumen de Prácticas Fáciles para Funcionamiento Correcto
+Divide responsabilidades evitando clases/métodos monolíticos.
+
+Aplica validaciones robustas al nivel de modelos antes de persistir.
+
+Usa repositorios para encapsular acceso a datos y facilitar cambios futuros.
+
+Implementa transacciones en MongoDB para operaciones críticas.
+
+Usa librerías npm para mejorar interacción y manejo de fechas/configuración.
+
+Documenta y comenta el código, especialmente donde hay lógica crítica o rollback.
+
+Realiza rollback manual en la aplicación cuando MongoDB no soporte rollback automático.
+
+Prueba por módulos y funciones unitarias para evitar errores generalizados.
+
+_---------
+
+Plan de Desarrollo Detallado para GymMaster CLI
+Fase 1: Preparación y Configuración Inicial
+Configurar el entorno de desarrollo con Node.js y npm.
+
+Crear estructura básica de carpetas (/models, /repositories, /services, /cli, /config).
+
+Instalar librerías npm principales: inquirer, chalk, dotenv, mongodb, dayjs.
+
+Configurar dotenv para variables sensibles (conexión MongoDB).
+
+Establecer conexión con MongoDB usando el driver oficial, validar conexión.
+
+Crear archivo básico para iniciar la aplicación CLI.
+
+Fase 2: Definición de Modelos y Validaciones
+Diseñar y definir los modelos JavaScript con validaciones:
+
+Cliente: campos obligatorios, tipos, formatos.
+
+PlanEntrenamiento: nombre, duración, nivel, metas, estado.
+
+Seguimiento: peso, grasa, medidas, fotos, comentarios, fecha.
+
+Nutricion: alimentos, calorías, fechas.
+
+Contrato: condiciones, duración, precio, fechas.
+
+Finanzas: ingresos, egresos, tipos, fechas.
+
+Agregar validaciones automatizadas en cada modelo (funciones que validen datos antes de guardar).
+
+Fase 3: Repositorios y Operaciones CRUD
+Implementar patrón Repository para cada modelo, con métodos:
+
+create(), read(), update(), delete()
+
+Consultas específicas (ej. planes activos, clientes con planes, historial de seguimientos).
+
+Integrar transacciones básicas para operaciones críticas en MongoDB.
+
+Prueba unitaria básica con datos de ejemplo para cada repositorio.
+
+Fase 4: Lógica de Negocio y Servicios
+Crear servicios que usen los repositorios para funcionalidades complejas:
+
+Asignar plan y generar contrato automáticamente.
+
+Registrar seguimiento y manejar rollback si hay inconsistencias.
+
+Renovar, cancelar o finalizar planes con actualización de estados.
+
+Registrar ingresos y egresos financieros con transacciones.
+
+Generar reportes de progreso y saldo financiero.
+
+Implementar lógica de negocio aplicando principios SOLID y separación clara de responsabilidades.
+
+Fase 5: Interfaz CLI y Experiencia de Usuario
+Implementar menú interactivo con inquirer para:
+
+Gestión de clientes (crear, listar, actualizar, eliminar).
+
+Gestión de planes y asignación.
+
+Seguimiento físico.
+
+Nutrición.
+
+Gestión de contratos y finanzas.
+
+Integrar chalk para mensajes visuales claros (errores, éxitos, alertas).
+
+Validaciones en formularios y confirmaciones al usuario para evitar errores.
+
+Fase 6: Manejo de Errores y Consistencia
+Implementar control exhaustivo de errores y mensajes claros.
+
+Ajustar transacciones MongoDB para rollback en casos críticos (cancelación de planes, eliminación de seguimientos).
+
+Documentar claramente las operaciones críticas y mecanismos de rollback.
+
+Implementar logs básicos para seguimiento de operaciones importantes.
+
+Fase 7: Pruebas, Optimización y Documentación
+Realizar pruebas funcionales completas en todas las funcionalidades.
+
+Optimizar consultas Mongo (uso de índices, filtrados eficientes).
+
+Documentar código, ejemplos de uso y flujo de la aplicación.
+
+Preparar README con instrucciones para instalación, configuración y uso.
