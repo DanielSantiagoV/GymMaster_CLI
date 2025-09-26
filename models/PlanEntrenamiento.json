@@ -1,0 +1,9 @@
+{
+  "planId": "ObjectId",
+  "nombre": "string",
+  "duracionSemanas": "number",
+  "metasFisicas": "string",
+  "nivel": "string",
+  "clientes": ["ObjectId"],
+  "estado": "string"
+}

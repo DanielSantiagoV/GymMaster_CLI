@@ -1,0 +1,10 @@
+{
+  "clienteId": "ObjectId",
+  "nombre": "string",
+  "apellido": "string",
+  "email": "string",
+  "telefono": "string",
+  "fechaRegistro": "date",
+  "activo": "boolean",
+  "planes": ["ObjectId"]
+}

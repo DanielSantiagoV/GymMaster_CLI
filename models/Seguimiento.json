@@ -1,0 +1,15 @@
+{
+  "seguimientoId": "ObjectId",
+  "clienteId": "ObjectId",
+  "planId": "ObjectId",
+  "fecha": "date",
+  "peso": "number",
+  "grasaCorporal": "number",
+  "medidas": {
+    "cintura": "number",
+    "brazo": "number",
+    "pierna": "number"
+  },
+  "fotos": ["string"],
+  "comentarios": "string"
+}

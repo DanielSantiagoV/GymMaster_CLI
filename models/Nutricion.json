@@ -1,0 +1,13 @@
+{
+  "nutricionId": "ObjectId",
+  "clienteId": "ObjectId",
+  "planId": "ObjectId",
+  "fecha": "date",
+  "alimentos": [
+    {
+      "nombre": "string",
+      "calorias": "number",
+      "cantidad": "string"
+    }
+  ]
+}

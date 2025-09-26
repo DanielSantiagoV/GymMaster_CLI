@@ -1,0 +1,9 @@
+{
+  "movimientoId": "ObjectId",
+  "tipo": "string",
+  "descripcion": "string",
+  "monto": "number",
+  "fecha": "date",
+  "clienteId": "ObjectId",
+  "categoria": "string"
+}

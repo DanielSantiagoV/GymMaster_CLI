@@ -1,0 +1,11 @@
+{
+  "contratoId": "ObjectId",
+  "clienteId": "ObjectId",
+  "planId": "ObjectId",
+  "condiciones": "string",
+  "duracionMeses": "number",
+  "precio": "number",
+  "fechaInicio": "date",
+  "fechaFin": "date",
+  "estado": "string"
+}
