@@ -67,6 +67,43 @@ class ClienteRepository {
     }
 
     /**
+     * Obtiene un cliente por su email
+     * @param {string} email - Email del cliente
+     * @returns {Promise<Cliente|null>} Cliente encontrado o null
+     * @throws {Error} Si el email no es válido
+     */
+    async getByEmail(email) {
+        try {
+            if (!email || typeof email !== 'string') {
+                throw new Error('Email debe ser una string válida');
+            }
+
+            const clienteDoc = await this.collection.findOne({ email: email.toLowerCase().trim() });
+            
+            if (!clienteDoc) {
+                return null;
+            }
+
+            return Cliente.fromMongoObject(clienteDoc);
+        } catch (error) {
+            throw new Error(`Error al obtener cliente por email: ${error.message}`);
+        }
+    }
+
+    /**
+     * Cuenta el número de clientes que coinciden con el filtro
+     * @param {Object} filter - Filtro de búsqueda
+     * @returns {Promise<number>} Número de clientes que coinciden
+     */
+    async countClientes(filter = {}) {
+        try {
+            return await this.collection.countDocuments(filter);
+        } catch (error) {
+            throw new Error(`Error al contar clientes: ${error.message}`);
+        }
+    }
+
+    /**
      * Obtiene todos los clientes con filtro opcional
      * @param {Object} filter - Filtro de búsqueda
      * @param {Object} options - Opciones de consulta (limit, skip, sort)
