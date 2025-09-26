@@ -19,10 +19,7 @@ class DatabaseConfig {
      */
     async connect() {
         try {
-            this.client = new MongoClient(this.uri, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-            });
+            this.client = new MongoClient(this.uri);
 
             await this.client.connect();
             this.db = this.client.db(this.databaseName);

@@ -8,6 +8,7 @@
 const chalk = require('chalk');
 const connectionManager = require('./config/connection');
 const config = require('./config');
+const GymMasterCLI = require('./cli');
 
 /**
  * Clase principal de la aplicación
@@ -179,12 +180,16 @@ class GymMasterApp {
         // Mostrar mensaje de bienvenida
         this.showWelcomeMessage();
         
-        // Mostrar menú principal
-        this.showMainMenu();
+        // Iniciar interfaz CLI interactiva
+        console.log(chalk.green('🚀 Iniciando interfaz CLI interactiva...\n'));
         
-        // TODO: Implementar lógica de menú interactivo con inquirer
-        console.log(chalk.yellow('🚧 Funcionalidad de menú en desarrollo...'));
-        console.log(chalk.gray('La Fase 1 está completa. Próximamente: Fase 2 - Modelos y Validaciones'));
+        try {
+            const cli = new GymMasterCLI();
+            await cli.iniciar();
+        } catch (error) {
+            console.error(chalk.red('❌ Error en la interfaz CLI:'), error.message);
+            throw error;
+        }
     }
 
     /**
