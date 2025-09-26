@@ -44,7 +44,7 @@ class GymMasterCLI {
             this.client = new MongoClient(mongoUrl);
 
             await this.client.connect();
-            this.db = this.client.db();
+            this.db = this.client.db('gymmaster');
 
             // Verificar conexión
             await this.db.admin().ping();
