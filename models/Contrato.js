@@ -15,7 +15,8 @@ class Contrato {
         precio, 
         fechaInicio = null, 
         fechaFin = null, 
-        estado = 'vigente' 
+        estado = 'vigente',
+        skipValidation = false
     }) {
         this.contratoId = contratoId || new ObjectId();
         this.clienteId = clienteId;
@@ -32,8 +33,10 @@ class Contrato {
             this.calcularFechaFin();
         }
         
-        // Validar datos al crear instancia
-        this.validate();
+        // Validar datos al crear instancia (solo si no se omite la validación)
+        if (!skipValidation) {
+            this.validate();
+        }
     }
 
     /**
@@ -152,10 +155,13 @@ class Contrato {
             throw new Error('Fecha de fin debe ser posterior a la fecha de inicio');
         }
         
-        // Verificar que la duración coincida con las fechas
+        // Verificar que la duración coincida con las fechas (con tolerancia más flexible)
         const duracionCalculada = this.calcularDuracionEnMeses();
-        if (Math.abs(duracionCalculada - this.duracionMeses) > 1) {
-            throw new Error('La duración en meses no coincide con las fechas del contrato');
+        const diferencia = Math.abs(duracionCalculada - this.duracionMeses);
+        
+        // Permitir diferencia de hasta 2 meses para manejar variaciones en días por mes
+        if (diferencia > 2) {
+            throw new Error(`La duración en meses no coincide con las fechas del contrato. Duración ingresada: ${this.duracionMeses} meses, duración calculada: ${Math.round(duracionCalculada)} meses`);
         }
     }
 
@@ -336,7 +342,8 @@ class Contrato {
             precio: mongoDoc.precio,
             fechaInicio: mongoDoc.fechaInicio,
             fechaFin: mongoDoc.fechaFin,
-            estado: mongoDoc.estado
+            estado: mongoDoc.estado,
+            skipValidation: true
         });
     }
 

@@ -6,9 +6,11 @@
 const ClienteService = require('./ClienteService');
 const PlanClienteService = require('./PlanClienteService');
 const PlanEntrenamientoService = require('./PlanEntrenamientoService');
+const ContratoService = require('./ContratoService');
 
 module.exports = {
     ClienteService,
     PlanClienteService,
-    PlanEntrenamientoService
+    PlanEntrenamientoService,
+    ContratoService
 };

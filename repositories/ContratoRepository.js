@@ -96,7 +96,21 @@ class ContratoRepository {
             }
 
             const contratosDocs = await query.toArray();
-            return contratosDocs.map(doc => Contrato.fromMongoObject(doc));
+            return contratosDocs.map(doc => {
+                // Crear instancia sin validaciones para contratos existentes
+                return new Contrato({
+                    contratoId: doc._id,
+                    clienteId: doc.clienteId,
+                    planId: doc.planId,
+                    condiciones: doc.condiciones,
+                    duracionMeses: doc.duracionMeses,
+                    precio: doc.precio,
+                    fechaInicio: doc.fechaInicio,
+                    fechaFin: doc.fechaFin,
+                    estado: doc.estado,
+                    skipValidation: true
+                });
+            });
         } catch (error) {
             throw new Error(`Error al obtener contratos: ${error.message}`);
         }
@@ -493,6 +507,90 @@ class ContratoRepository {
             });
         } catch (error) {
             throw new Error(`Error al obtener contratos por cliente y plan: ${error.message}`);
+        }
+    }
+
+    /**
+     * Obtiene contratos con filtros opcionales
+     * @param {Object} filtros - Filtros de búsqueda
+     * @param {Object} opciones - Opciones de paginación
+     * @returns {Promise<Object[]>} Array de contratos
+     */
+    async getContracts(filtros = {}, opciones = {}) {
+        try {
+            let query = {};
+            
+            // Aplicar filtros
+            if (filtros.estado) {
+                query.estado = filtros.estado;
+            }
+            if (filtros.clienteId) {
+                query.clienteId = new ObjectId(filtros.clienteId);
+            }
+            if (filtros.planId) {
+                query.planId = new ObjectId(filtros.planId);
+            }
+            if (filtros.fechaInicio || filtros.fechaFin) {
+                query.fechaInicio = {};
+                if (filtros.fechaInicio) {
+                    query.fechaInicio.$gte = new Date(filtros.fechaInicio);
+                }
+                if (filtros.fechaFin) {
+                    query.fechaInicio.$lte = new Date(filtros.fechaFin);
+                }
+            }
+
+            // Aplicar opciones
+            let cursor = this.collection.find(query);
+            
+            if (opciones.limit) {
+                cursor = cursor.limit(opciones.limit);
+            }
+            if (opciones.skip) {
+                cursor = cursor.skip(opciones.skip);
+            }
+            if (opciones.sort) {
+                cursor = cursor.sort(opciones.sort);
+            }
+
+            return await cursor.toArray();
+        } catch (error) {
+            throw new Error(`Error al obtener contratos: ${error.message}`);
+        }
+    }
+
+    /**
+     * Cuenta contratos con filtros opcionales
+     * @param {Object} filtros - Filtros de búsqueda
+     * @returns {Promise<number>} Número de contratos
+     */
+    async countContracts(filtros = {}) {
+        try {
+            let query = {};
+            
+            // Aplicar filtros
+            if (filtros.estado) {
+                query.estado = filtros.estado;
+            }
+            if (filtros.clienteId) {
+                query.clienteId = new ObjectId(filtros.clienteId);
+            }
+            if (filtros.planId) {
+                query.planId = new ObjectId(filtros.planId);
+            }
+            if (filtros.fechaInicio || filtros.fechaFin) {
+                query.fechaInicio = {};
+                if (filtros.fechaInicio) {
+                    query.fechaInicio.$gte = new Date(filtros.fechaInicio);
+                }
+                if (filtros.fechaFin) {
+                    query.fechaInicio.$lte = new Date(filtros.fechaFin);
+                }
+            }
+
+            return await this.collection.countDocuments(query);
+        } catch (error) {
+            throw new Error(`Error al contar contratos: ${error.message}`);
         }
     }
 }

@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 const MenuPrincipal = require('./MenuPrincipal');
+const ContratoCLI = require('./ContratoCLI');
 
 /**
  * Punto de entrada principal de la aplicación CLI
