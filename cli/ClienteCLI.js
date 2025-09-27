@@ -1,6 +1,6 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
-const { ClienteService, PlanClienteService } = require('../services');
+const { ClienteService, PlanClienteService } = require('../services/index');
 const { ObjectId } = require('mongodb');
 
 /**

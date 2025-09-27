@@ -297,8 +297,11 @@ class PlanEntrenamiento {
         const indicePlan = niveles.indexOf(this.nivel);
         const indiceCliente = niveles.indexOf(nivelCliente.toLowerCase());
         
-        // Un plan puede ser usado por clientes de su nivel o inferior
-        return indiceCliente >= indicePlan;
+        // Un cliente puede usar un plan de su nivel o superior
+        // Un principiante puede usar planes principiante, intermedio y avanzado
+        // Un intermedio puede usar planes intermedio y avanzado
+        // Un avanzado solo puede usar planes avanzado
+        return indiceCliente <= indicePlan;
     }
 }
 

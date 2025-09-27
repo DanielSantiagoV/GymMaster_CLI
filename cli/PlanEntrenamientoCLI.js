@@ -1,6 +1,6 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
-const { PlanEntrenamientoService } = require('../services');
+const { PlanEntrenamientoService } = require('../services/index');
 const { ObjectId } = require('mongodb');
 
 /**
@@ -969,7 +969,7 @@ class PlanEntrenamientoCLI {
             console.log(chalk.yellow('\n⏳ Buscando cliente...'));
 
             // Usar el servicio de clientes para buscar
-            const { ClienteService } = require('./services');
+            const { ClienteService } = require('../services/index');
             const clienteService = new ClienteService(this.planService.db);
             const resultadoBusqueda = await clienteService.buscarClientes(busqueda.termino);
 
