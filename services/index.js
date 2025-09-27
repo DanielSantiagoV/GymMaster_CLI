@@ -4,7 +4,11 @@
  */
 
 const ClienteService = require('./ClienteService');
+const PlanClienteService = require('./PlanClienteService');
+const PlanEntrenamientoService = require('./PlanEntrenamientoService');
 
 module.exports = {
-    ClienteService
+    ClienteService,
+    PlanClienteService,
+    PlanEntrenamientoService
 };

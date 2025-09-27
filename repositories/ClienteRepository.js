@@ -386,6 +386,68 @@ class ClienteRepository {
             throw new Error(`Error al obtener clientes por rango de fechas: ${error.message}`);
         }
     }
+
+    /**
+     * Verifica si un cliente tiene un plan específico
+     * @param {string|ObjectId} clienteId - ID del cliente
+     * @param {string|ObjectId} planId - ID del plan
+     * @returns {Promise<boolean>} True si el cliente tiene el plan
+     */
+    async clientHasPlan(clienteId, planId) {
+        try {
+            if (!ObjectId.isValid(clienteId) || !ObjectId.isValid(planId)) {
+                throw new Error('IDs deben ser ObjectIds válidos');
+            }
+
+            const cliente = await this.collection.findOne({
+                _id: new ObjectId(clienteId),
+                planes: new ObjectId(planId)
+            });
+
+            return !!cliente;
+        } catch (error) {
+            throw new Error(`Error al verificar plan del cliente: ${error.message}`);
+        }
+    }
+
+    /**
+     * Obtiene los planes de un cliente
+     * @param {string|ObjectId} clienteId - ID del cliente
+     * @returns {Promise<Object[]>} Array de planes del cliente
+     */
+    async getClientPlans(clienteId) {
+        try {
+            if (!ObjectId.isValid(clienteId)) {
+                throw new Error('ID del cliente no es válido');
+            }
+
+            const cliente = await this.collection.findOne({ _id: new ObjectId(clienteId) });
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            if (!cliente.planes || cliente.planes.length === 0) {
+                return [];
+            }
+
+            // Obtener información completa de los planes
+            const planesCollection = this.db.collection('planes');
+            const planes = await planesCollection.find({
+                _id: { $in: cliente.planes }
+            }).toArray();
+
+            return planes.map(plan => ({
+                planId: plan._id,
+                nombre: plan.nombre,
+                duracionSemanas: plan.duracionSemanas,
+                nivel: plan.nivel,
+                estado: plan.estado,
+                metasFisicas: plan.metasFisicas
+            }));
+        } catch (error) {
+            throw new Error(`Error al obtener planes del cliente: ${error.message}`);
+        }
+    }
 }
 
 module.exports = ClienteRepository;

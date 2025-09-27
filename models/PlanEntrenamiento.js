@@ -83,8 +83,8 @@ class PlanEntrenamiento {
         if (!this.metasFisicas || typeof this.metasFisicas !== 'string') {
             throw new Error('Metas físicas son obligatorias y deben ser string');
         }
-        if (this.metasFisicas.trim().length < 10) {
-            throw new Error('Metas físicas deben tener al menos 10 caracteres');
+        if (this.metasFisicas.trim().length < 5) {
+            throw new Error('Metas físicas deben tener al menos 5 caracteres');
         }
         if (this.metasFisicas.trim().length > 500) {
             throw new Error('Metas físicas no pueden exceder 500 caracteres');
@@ -288,6 +288,11 @@ class PlanEntrenamiento {
      * @returns {boolean} True si es compatible
      */
     esCompatibleConNivel(nivelCliente) {
+        // Si no se proporciona nivel del cliente, asumir principiante
+        if (!nivelCliente || typeof nivelCliente !== 'string') {
+            nivelCliente = 'principiante';
+        }
+        
         const niveles = ['principiante', 'intermedio', 'avanzado'];
         const indicePlan = niveles.indexOf(this.nivel);
         const indiceCliente = niveles.indexOf(nivelCliente.toLowerCase());

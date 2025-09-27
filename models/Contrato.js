@@ -401,3 +401,4 @@ class Contrato {
 }
 
 module.exports = Contrato;
+

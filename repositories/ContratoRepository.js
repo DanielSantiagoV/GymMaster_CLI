@@ -193,45 +193,17 @@ class ContratoRepository {
                 throw new Error('El contrato ya está cancelado');
             }
 
-            // Iniciar transacción para rollback si es necesario
-            const session = this.db.client.startSession();
-            
-            try {
-                await session.withTransaction(async () => {
-                    // Cambiar estado del contrato a cancelado
-                    const result = await this.collection.updateOne(
-                        { _id: new ObjectId(id) },
-                        { $set: { estado: 'cancelado' } },
-                        { session }
-                    );
+            // Cambiar estado del contrato a cancelado
+            const result = await this.collection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { estado: 'cancelado' } }
+            );
 
-                    if (result.modifiedCount === 0) {
-                        throw new Error('No se pudo cancelar el contrato');
-                    }
-
-                    // Rollback: Remover el plan del cliente
-                    const clientesCollection = this.db.collection('clientes');
-                    await clientesCollection.updateOne(
-                        { _id: contrato.clienteId },
-                        { $pull: { planes: contrato.planId } },
-                        { session }
-                    );
-
-                    // Rollback: Cambiar estado del plan a cancelado
-                    const planesCollection = this.db.collection('planes');
-                    await planesCollection.updateOne(
-                        { _id: contrato.planId },
-                        { $set: { estado: 'cancelado' } },
-                        { session }
-                    );
-
-                    console.log('✅ Contrato cancelado y rollback ejecutado correctamente');
-                });
-
-                return true;
-            } finally {
-                await session.endSession();
+            if (result.modifiedCount === 0) {
+                throw new Error('No se pudo cancelar el contrato');
             }
+
+            return true;
         } catch (error) {
             throw new Error(`Error al cancelar contrato: ${error.message}`);
         }

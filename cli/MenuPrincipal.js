@@ -1,6 +1,7 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const ClienteCLI = require('./ClienteCLI');
+const PlanEntrenamientoCLI = require('./PlanEntrenamientoCLI');
 
 /**
  * Menú Principal del Sistema GymMaster CLI
@@ -10,6 +11,7 @@ class MenuPrincipal {
     constructor(db) {
         this.db = db;
         this.clienteCLI = new ClienteCLI(db);
+        this.planEntrenamientoCLI = new PlanEntrenamientoCLI(db);
     }
 
     /**
@@ -81,7 +83,9 @@ class MenuPrincipal {
                 await this.mostrarMenuPrincipal();
                 break;
             case 'planes':
-                await this.mostrarMenuPlanes();
+                await this.planEntrenamientoCLI.mostrarMenuPlanes();
+                // Volver al menú principal después de gestionar planes
+                await this.mostrarMenuPrincipal();
                 break;
             case 'seguimiento':
                 await this.mostrarMenuSeguimiento();
@@ -107,24 +111,6 @@ class MenuPrincipal {
         }
     }
 
-    /**
-     * Muestra el menú de gestión de planes (placeholder)
-     */
-    async mostrarMenuPlanes() {
-        console.log(chalk.yellow('\n📋 Gestión de Planes de Entrenamiento'));
-        console.log(chalk.gray('Esta funcionalidad estará disponible próximamente...\n'));
-        
-        const continuar = await inquirer.prompt([{
-            type: 'confirm',
-            name: 'continuar',
-            message: '¿Deseas volver al menú principal?',
-            default: true
-        }]);
-
-        if (continuar.continuar) {
-            await this.mostrarMenuPrincipal();
-        }
-    }
 
     /**
      * Muestra el menú de seguimiento físico (placeholder)

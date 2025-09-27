@@ -427,6 +427,19 @@ class PlanEntrenamientoRepository {
             throw new Error(`Error al obtener planes por rango de fechas: ${error.message}`);
         }
     }
+
+    /**
+     * Cuenta el número de planes que coinciden con el filtro
+     * @param {Object} filter - Filtro de búsqueda
+     * @returns {Promise<number>} Número de planes que coinciden
+     */
+    async countPlanes(filter = {}) {
+        try {
+            return await this.collection.countDocuments(filter);
+        } catch (error) {
+            throw new Error(`Error al contar planes: ${error.message}`);
+        }
+    }
 }
 
 module.exports = PlanEntrenamientoRepository;

@@ -1,6 +1,6 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
-const { ClienteService } = require('../services');
+const { ClienteService, PlanClienteService } = require('../services');
 const { ObjectId } = require('mongodb');
 
 /**
@@ -10,6 +10,7 @@ const { ObjectId } = require('mongodb');
 class ClienteCLI {
     constructor(db) {
         this.clienteService = new ClienteService(db);
+        this.planClienteService = new PlanClienteService(db);
     }
 
     /**
@@ -149,6 +150,17 @@ class ClienteCLI {
                         }
                         return true;
                     }
+                },
+                {
+                    type: 'list',
+                    name: 'nivel',
+                    message: 'Nivel del cliente:',
+                    choices: [
+                        { name: 'Principiante', value: 'principiante' },
+                        { name: 'Intermedio', value: 'intermedio' },
+                        { name: 'Avanzado', value: 'avanzado' }
+                    ],
+                    default: 'principiante'
                 }
             ]);
 
@@ -235,6 +247,7 @@ class ClienteCLI {
                         console.log(chalk.cyan(`${index + 1}. ${cliente.nombreCompleto}`));
                         console.log(chalk.gray(`   Email: ${cliente.email}`));
                         console.log(chalk.gray(`   Teléfono: ${cliente.telefono}`));
+                        console.log(chalk.gray(`   Nivel: ${cliente.nivel}`));
                         console.log(chalk.gray(`   Estado: ${estado}`));
                         console.log(chalk.gray(`   Planes: ${cliente.cantidadPlanes}`));
                         console.log(chalk.gray(`   Registro: ${cliente.fechaRegistro}`));
@@ -288,6 +301,7 @@ class ClienteCLI {
                         console.log(chalk.cyan(`${index + 1}. ${cliente.nombreCompleto}`));
                         console.log(chalk.gray(`   Email: ${cliente.email}`));
                         console.log(chalk.gray(`   Teléfono: ${cliente.telefono}`));
+                        console.log(chalk.gray(`   Nivel: ${cliente.nivel}`));
                         console.log(chalk.gray(`   Estado: ${estado}`));
                         console.log(chalk.gray(`   ID: ${cliente.clienteId}\n`));
                     });
@@ -364,6 +378,7 @@ class ClienteCLI {
             console.log(chalk.gray(`Nombre: ${clienteSeleccionado.nombreCompleto}`));
             console.log(chalk.gray(`Email: ${clienteSeleccionado.email}`));
             console.log(chalk.gray(`Teléfono: ${clienteSeleccionado.telefono}`));
+            console.log(chalk.gray(`Nivel: ${clienteSeleccionado.nivel}`));
             console.log(chalk.gray(`Estado: ${clienteSeleccionado.activo ? 'Activo' : 'Inactivo'}\n`));
 
             // Campos a actualizar
@@ -391,6 +406,17 @@ class ClienteCLI {
                     name: 'telefono',
                     message: 'Nuevo teléfono (presiona Enter para mantener actual):',
                     default: clienteSeleccionado.telefono
+                },
+                {
+                    type: 'list',
+                    name: 'nivel',
+                    message: 'Nuevo nivel (presiona Enter para mantener actual):',
+                    choices: [
+                        { name: 'Principiante', value: 'principiante' },
+                        { name: 'Intermedio', value: 'intermedio' },
+                        { name: 'Avanzado', value: 'avanzado' }
+                    ],
+                    default: clienteSeleccionado.nivel
                 },
                 {
                     type: 'list',
@@ -599,13 +625,463 @@ class ClienteCLI {
     }
 
     /**
-     * Gestiona planes de un cliente (placeholder)
+     * Gestiona planes de un cliente
      */
     async gestionarPlanesCliente() {
         console.log(chalk.blue('\n🔗 GESTIONAR PLANES DEL CLIENTE'));
         console.log(chalk.gray('================================\n'));
-        console.log(chalk.yellow('Esta funcionalidad estará disponible próximamente...'));
-        console.log(chalk.gray('Aquí podrás asociar y desasociar planes de entrenamiento a los clientes.\n'));
+
+        try {
+            // Buscar cliente
+            const busqueda = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'termino',
+                    message: 'Ingresa el nombre, email o ID del cliente:',
+                    validate: (input) => {
+                        if (!input || input.trim().length < 2) {
+                            return 'El término de búsqueda debe tener al menos 2 caracteres';
+                        }
+                        return true;
+                    }
+                }
+            ]);
+
+            console.log(chalk.yellow('\n⏳ Buscando cliente...'));
+
+            const resultadoBusqueda = await this.clienteService.buscarClientes(busqueda.termino);
+
+            if (!resultadoBusqueda.success || resultadoBusqueda.data.length === 0) {
+                console.log(chalk.red('No se encontró el cliente.'));
+                await this.pausar();
+                return;
+            }
+
+            // Seleccionar cliente
+            let clienteSeleccionado;
+            if (resultadoBusqueda.data.length === 1) {
+                clienteSeleccionado = resultadoBusqueda.data[0];
+            } else {
+                const opciones = resultadoBusqueda.data.map((cliente, index) => ({
+                    name: `${cliente.nombreCompleto} (${cliente.email})`,
+                    value: cliente.clienteId
+                }));
+
+                const seleccion = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'clienteId',
+                        message: 'Selecciona el cliente:',
+                        choices: opciones
+                    }
+                ]);
+
+                clienteSeleccionado = resultadoBusqueda.data.find(c => c.clienteId === seleccion.clienteId);
+            }
+
+            // Mostrar información del cliente
+            console.log(chalk.blue('\n📋 INFORMACIÓN DEL CLIENTE:'));
+            console.log(chalk.gray(`Nombre: ${clienteSeleccionado.nombreCompleto}`));
+            console.log(chalk.gray(`Email: ${clienteSeleccionado.email}`));
+            console.log(chalk.gray(`Nivel: ${clienteSeleccionado.nivel}`));
+            console.log(chalk.gray(`Planes actuales: ${clienteSeleccionado.cantidadPlanes}\n`));
+
+            // Menú de opciones para planes
+            const opcionesPlanes = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'opcion',
+                    message: chalk.yellow('¿Qué deseas hacer con los planes del cliente?'),
+                    choices: [
+                        {
+                            name: '📋 Ver Planes Actuales',
+                            value: 'ver'
+                        },
+                        {
+                            name: '➕ Asociar Nuevo Plan',
+                            value: 'asociar'
+                        },
+                        {
+                            name: '➖ Desasociar Plan',
+                            value: 'desasociar'
+                        },
+                        {
+                            name: '🔄 Renovar Contrato',
+                            value: 'renovar'
+                        },
+                        {
+                            name: '📊 Ver Estadísticas de Planes',
+                            value: 'estadisticas'
+                        },
+                        {
+                            name: '⬅️  Volver al Menú de Clientes',
+                            value: 'volver'
+                        }
+                    ]
+                }
+            ]);
+
+            switch (opcionesPlanes.opcion) {
+                case 'ver':
+                    await this.verPlanesCliente(clienteSeleccionado.clienteId);
+                    break;
+                case 'asociar':
+                    await this.asociarPlanACliente(clienteSeleccionado.clienteId);
+                    break;
+                case 'desasociar':
+                    await this.desasociarPlanDeCliente(clienteSeleccionado.clienteId);
+                    break;
+                case 'renovar':
+                    await this.renovarContratoCliente(clienteSeleccionado.clienteId);
+                    break;
+                case 'estadisticas':
+                    await this.verEstadisticasPlanesCliente(clienteSeleccionado.clienteId);
+                    break;
+                case 'volver':
+                    return;
+            }
+
+            // Volver al menú de gestión de planes si no se seleccionó "volver"
+            if (opcionesPlanes.opcion !== 'volver') {
+                await this.gestionarPlanesCliente();
+            }
+
+        } catch (error) {
+            console.log(chalk.red('\n❌ Error al gestionar planes del cliente:'));
+            console.log(chalk.red(error.message));
+            await this.pausar();
+        }
+    }
+
+    /**
+     * Muestra los planes actuales de un cliente
+     */
+    async verPlanesCliente(clienteId) {
+        console.log(chalk.blue('\n📋 PLANES ACTUALES DEL CLIENTE'));
+        console.log(chalk.gray('================================\n'));
+
+        try {
+            console.log(chalk.yellow('\n⏳ Cargando planes...'));
+
+            const resultado = await this.planClienteService.obtenerPlanesDelCliente(clienteId);
+
+            if (resultado.success) {
+                if (resultado.data.length > 0) {
+                    console.log(chalk.green(`\n✅ Se encontraron ${resultado.total} planes`));
+
+                    resultado.data.forEach((plan, index) => {
+                        const estadoPlan = plan.estado === 'activo' ? chalk.green('Activo') : chalk.red(plan.estado);
+                        const tieneContrato = plan.tieneContratoActivo ? chalk.green('Sí') : chalk.red('No');
+
+                        console.log(chalk.cyan(`\n${index + 1}. ${plan.nombre}`));
+                        console.log(chalk.gray(`   Duración: ${plan.duracionSemanas} semanas (${plan.duracionMeses} meses)`));
+                        console.log(chalk.gray(`   Nivel: ${plan.nivel}`));
+                        console.log(chalk.gray(`   Estado: ${estadoPlan}`));
+                        console.log(chalk.gray(`   Contrato activo: ${tieneContrato}`));
+
+                        if (plan.contrato) {
+                            const estadoContrato = plan.contrato.estaVigente ? chalk.green('Vigente') : chalk.red(plan.contrato.estado);
+                            console.log(chalk.gray(`   Precio: $${plan.contrato.precio}`));
+                            console.log(chalk.gray(`   Duración contrato: ${plan.contrato.duracionMeses} meses`));
+                            console.log(chalk.gray(`   Estado contrato: ${estadoContrato}`));
+                            console.log(chalk.gray(`   Fecha inicio: ${plan.contrato.fechaInicio}`));
+                            console.log(chalk.gray(`   Fecha fin: ${plan.contrato.fechaFin}`));
+                        }
+
+                        console.log(chalk.gray(`   Metas: ${plan.metasFisicas}`));
+                    });
+                } else {
+                    console.log(chalk.yellow('El cliente no tiene planes asignados.'));
+                }
+            }
+
+        } catch (error) {
+            console.log(chalk.red('\n❌ Error al obtener planes del cliente:'));
+            console.log(chalk.red(error.message));
+        }
+
+        await this.pausar();
+    }
+
+    /**
+     * Asocia un nuevo plan a un cliente
+     */
+    async asociarPlanACliente(clienteId) {
+        console.log(chalk.blue('\n➕ ASOCIAR NUEVO PLAN AL CLIENTE'));
+        console.log(chalk.gray('==================================\n'));
+
+        try {
+            console.log(chalk.yellow('\n⏳ Cargando planes disponibles...'));
+
+            const resultado = await this.planClienteService.obtenerPlanesDisponiblesParaCliente(clienteId);
+
+            if (!resultado.success || resultado.data.length === 0) {
+                console.log(chalk.yellow('No hay planes disponibles para este cliente.'));
+                await this.pausar();
+                return;
+            }
+
+            // Seleccionar plan
+            const opcionesPlanes = resultado.data.map((plan, index) => ({
+                name: `${plan.nombre} (${plan.duracionSemanas} semanas, ${plan.nivel})`,
+                value: plan.planId
+            }));
+
+            const seleccionPlan = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'planId',
+                    message: 'Selecciona el plan a asociar:',
+                    choices: opcionesPlanes
+                }
+            ]);
+
+            // Datos del contrato
+            const datosContrato = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'precio',
+                    message: 'Precio del contrato:',
+                    validate: (input) => {
+                        const precio = parseFloat(input);
+                        if (isNaN(precio) || precio < 0) {
+                            return 'El precio debe ser un número positivo';
+                        }
+                        return true;
+                    }
+                },
+                {
+                    type: 'input',
+                    name: 'duracionMeses',
+                    message: 'Duración del contrato en meses:',
+                    default: '1',
+                    validate: (input) => {
+                        const duracion = parseInt(input);
+                        if (isNaN(duracion) || duracion < 1 || duracion > 60) {
+                            return 'La duración debe ser un número entre 1 y 60 meses';
+                        }
+                        return true;
+                    }
+                },
+                {
+                    type: 'input',
+                    name: 'condiciones',
+                    message: 'Condiciones del contrato (opcional):',
+                    default: ''
+                }
+            ]);
+
+            console.log(chalk.yellow('\n⏳ Asociando plan al cliente...'));
+
+            const resultadoAsociacion = await this.planClienteService.asociarPlanACliente(
+                clienteId,
+                seleccionPlan.planId,
+                {
+                    precio: parseFloat(datosContrato.precio),
+                    duracionMeses: parseInt(datosContrato.duracionMeses),
+                    condiciones: datosContrato.condiciones || undefined
+                }
+            );
+
+            if (resultadoAsociacion.success) {
+                console.log(chalk.green('\n✅ ¡Plan asociado exitosamente!'));
+                console.log(chalk.gray(`Contrato ID: ${resultadoAsociacion.contratoId}`));
+                console.log(chalk.gray(resultadoAsociacion.mensaje));
+            }
+
+        } catch (error) {
+            console.log(chalk.red('\n❌ Error al asociar plan:'));
+            console.log(chalk.red(error.message));
+        }
+
+        await this.pausar();
+    }
+
+    /**
+     * Desasocia un plan de un cliente
+     */
+    async desasociarPlanDeCliente(clienteId) {
+        console.log(chalk.blue('\n➖ DESASOCIAR PLAN DEL CLIENTE'));
+        console.log(chalk.gray('================================\n'));
+
+        try {
+            console.log(chalk.yellow('\n⏳ Cargando planes del cliente...'));
+
+            const resultado = await this.planClienteService.obtenerPlanesDelCliente(clienteId);
+
+            if (!resultado.success || resultado.data.length === 0) {
+                console.log(chalk.yellow('El cliente no tiene planes asignados.'));
+                await this.pausar();
+                return;
+            }
+
+            // Seleccionar plan a desasociar
+            const opcionesPlanes = resultado.data.map((plan, index) => ({
+                name: `${plan.nombre} (${plan.estado})`,
+                value: plan.planId
+            }));
+
+            const seleccionPlan = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'planId',
+                    message: 'Selecciona el plan a desasociar:',
+                    choices: opcionesPlanes
+                }
+            ]);
+
+            // Verificar si tiene contrato activo
+            const planSeleccionado = resultado.data.find(p => p.planId === seleccionPlan.planId);
+            let forzar = false;
+
+            if (planSeleccionado.tieneContratoActivo) {
+                const confirmacion = await inquirer.prompt([
+                    {
+                        type: 'confirm',
+                        name: 'forzar',
+                        message: 'El cliente tiene un contrato activo con este plan. ¿Deseas cancelar el contrato y desasociar el plan?',
+                        default: false
+                    }
+                ]);
+                forzar = confirmacion.forzar;
+            }
+
+            console.log(chalk.yellow('\n⏳ Desasociando plan del cliente...'));
+
+            const resultadoDesasociacion = await this.planClienteService.desasociarPlanDeCliente(
+                clienteId,
+                seleccionPlan.planId,
+                forzar
+            );
+
+            if (resultadoDesasociacion.success) {
+                console.log(chalk.green('\n✅ ¡Plan desasociado exitosamente!'));
+                console.log(chalk.gray(resultadoDesasociacion.mensaje));
+                if (resultadoDesasociacion.contratoCancelado) {
+                    console.log(chalk.yellow('El contrato fue cancelado automáticamente.'));
+                }
+            }
+
+        } catch (error) {
+            console.log(chalk.red('\n❌ Error al desasociar plan:'));
+            console.log(chalk.red(error.message));
+        }
+
+        await this.pausar();
+    }
+
+    /**
+     * Renueva un contrato existente
+     */
+    async renovarContratoCliente(clienteId) {
+        console.log(chalk.blue('\n🔄 RENOVAR CONTRATO DEL CLIENTE'));
+        console.log(chalk.gray('==================================\n'));
+
+        try {
+            console.log(chalk.yellow('\n⏳ Cargando contratos activos...'));
+
+            const resultado = await this.planClienteService.obtenerPlanesDelCliente(clienteId);
+
+            if (!resultado.success || resultado.data.length === 0) {
+                console.log(chalk.yellow('El cliente no tiene planes asignados.'));
+                await this.pausar();
+                return;
+            }
+
+            // Filtrar planes con contratos activos
+            const planesConContratos = resultado.data.filter(p => p.tieneContratoActivo);
+
+            if (planesConContratos.length === 0) {
+                console.log(chalk.yellow('El cliente no tiene contratos activos.'));
+                await this.pausar();
+                return;
+            }
+
+            // Seleccionar contrato a renovar
+            const opcionesContratos = planesConContratos.map((plan, index) => ({
+                name: `${plan.nombre} - Contrato ID: ${plan.contrato.contratoId}`,
+                value: plan.contrato.contratoId
+            }));
+
+            const seleccionContrato = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'contratoId',
+                    message: 'Selecciona el contrato a renovar:',
+                    choices: opcionesContratos
+                }
+            ]);
+
+            // Meses adicionales
+            const datosRenovacion = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'mesesAdicionales',
+                    message: 'Meses adicionales para el contrato:',
+                    validate: (input) => {
+                        const meses = parseInt(input);
+                        if (isNaN(meses) || meses < 1 || meses > 60) {
+                            return 'Los meses deben ser un número entre 1 y 60';
+                        }
+                        return true;
+                    }
+                }
+            ]);
+
+            console.log(chalk.yellow('\n⏳ Renovando contrato...'));
+
+            const resultadoRenovacion = await this.planClienteService.renovarContrato(
+                seleccionContrato.contratoId,
+                parseInt(datosRenovacion.mesesAdicionales)
+            );
+
+            if (resultadoRenovacion.success) {
+                console.log(chalk.green('\n✅ ¡Contrato renovado exitosamente!'));
+                console.log(chalk.gray(resultadoRenovacion.mensaje));
+            }
+
+        } catch (error) {
+            console.log(chalk.red('\n❌ Error al renovar contrato:'));
+            console.log(chalk.red(error.message));
+        }
+
+        await this.pausar();
+    }
+
+    /**
+     * Muestra estadísticas de planes del cliente
+     */
+    async verEstadisticasPlanesCliente(clienteId) {
+        console.log(chalk.blue('\n📊 ESTADÍSTICAS DE PLANES DEL CLIENTE'));
+        console.log(chalk.gray('=====================================\n'));
+
+        try {
+            console.log(chalk.yellow('\n⏳ Cargando estadísticas...'));
+
+            const estadisticas = await this.planClienteService.obtenerEstadisticasPlanesCliente(clienteId);
+
+            if (estadisticas.success) {
+                const stats = estadisticas.data;
+                
+                console.log(chalk.green('\n📈 RESUMEN DE PLANES:'));
+                console.log(chalk.gray(`Total de planes: ${chalk.cyan(stats.totalPlanes)}`));
+                console.log(chalk.gray(`Planes con contrato activo: ${chalk.green(stats.planesConContratoActivo)}`));
+                console.log(chalk.gray(`Planes sin contrato: ${chalk.yellow(stats.planesSinContrato)}`));
+
+                console.log(chalk.green('\n📋 RESUMEN DE CONTRATOS:'));
+                console.log(chalk.gray(`Contratos activos: ${chalk.green(stats.contratosActivos)}`));
+                console.log(chalk.gray(`Contratos cancelados: ${chalk.red(stats.contratosCancelados)}`));
+                console.log(chalk.gray(`Contratos finalizados: ${chalk.blue(stats.contratosFinalizados)}`));
+
+                console.log(chalk.green('\n💰 RESUMEN FINANCIERO:'));
+                console.log(chalk.gray(`Total invertido: ${chalk.cyan('$' + stats.totalInvertido.toFixed(2))}`));
+                console.log(chalk.gray(`Promedio de duración: ${chalk.cyan(stats.promedioDuracion.toFixed(1))} meses`));
+            }
+
+        } catch (error) {
+            console.log(chalk.red('\n❌ Error al obtener estadísticas:'));
+            console.log(chalk.red(error.message));
+        }
 
         await this.pausar();
     }
