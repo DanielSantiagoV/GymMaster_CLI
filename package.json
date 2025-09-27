@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup-replica": "node scripts/setup-replica-set.js",
+    "check-replica": "node scripts/check-replica-set.js",
+    "fix-mongodb": "node scripts/fix-mongodb-replica.js",
+    "start-mongodb": "scripts/start-mongodb-replica.bat"
   },
   "repository": {
     "type": "git",

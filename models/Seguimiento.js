@@ -9,7 +9,7 @@ class Seguimiento {
     constructor({ 
         seguimientoId = null, 
         clienteId, 
-        planId, 
+        contratoId, 
         fecha = null, 
         peso = null, 
         grasaCorporal = null, 
@@ -19,13 +19,13 @@ class Seguimiento {
     }) {
         this.seguimientoId = seguimientoId || new ObjectId();
         this.clienteId = clienteId;
-        this.planId = planId;
+        this.contratoId = contratoId;
         this.fecha = fecha || new Date();
         this.peso = peso;
         this.grasaCorporal = grasaCorporal;
-        this.medidas = medidas;
-        this.fotos = fotos;
-        this.comentarios = comentarios;
+        this.medidas = medidas || {};
+        this.fotos = fotos || [];
+        this.comentarios = comentarios || '';
         
         // Validar datos al crear instancia
         this.validate();
@@ -37,7 +37,7 @@ class Seguimiento {
      */
     validate() {
         this.validateClienteId();
-        this.validatePlanId();
+        this.validateContratoId();
         this.validateFecha();
         this.validatePeso();
         this.validateGrasaCorporal();
@@ -59,14 +59,14 @@ class Seguimiento {
     }
 
     /**
-     * Valida el ID del plan
+     * Valida el ID del contrato
      */
-    validatePlanId() {
-        if (!this.planId) {
-            throw new Error('ID del plan es obligatorio');
+    validateContratoId() {
+        if (!this.contratoId) {
+            throw new Error('ID del contrato es obligatorio');
         }
-        if (!ObjectId.isValid(this.planId)) {
-            throw new Error('ID del plan debe ser un ObjectId válido');
+        if (!ObjectId.isValid(this.contratoId)) {
+            throw new Error('ID del contrato debe ser un ObjectId válido');
         }
     }
 
@@ -78,9 +78,12 @@ class Seguimiento {
             throw new Error('Fecha debe ser un objeto Date');
         }
         
-        // Verificar que no sea una fecha futura
-        if (this.fecha > new Date()) {
-            throw new Error('Fecha del seguimiento no puede ser futura');
+        // Verificar que no sea una fecha muy futura (más de 1 día)
+        const mañana = new Date();
+        mañana.setDate(mañana.getDate() + 1);
+        
+        if (this.fecha > mañana) {
+            throw new Error('Fecha del seguimiento no puede ser más de 1 día en el futuro');
         }
         
         // Verificar que no sea muy antigua (más de 1 año)
@@ -169,7 +172,7 @@ class Seguimiento {
             if (typeof foto !== 'string') {
                 throw new Error('Cada foto debe ser una string (URL o ruta)');
             }
-            if (foto.trim().length === 0) {
+            if (!foto || foto.trim().length === 0) {
                 throw new Error('Las fotos no pueden estar vacías');
             }
         }
@@ -180,7 +183,7 @@ class Seguimiento {
      */
     validateComentarios() {
         if (typeof this.comentarios !== 'string') {
-            throw new Error('Comentarios debe ser string');
+            this.comentarios = '';
         }
         
         if (this.comentarios.length > 1000) {
@@ -188,7 +191,7 @@ class Seguimiento {
         }
         
         // Limpiar comentarios
-        this.comentarios = this.comentarios.trim();
+        this.comentarios = this.comentarios ? this.comentarios.trim() : '';
     }
 
     /**
@@ -247,7 +250,7 @@ class Seguimiento {
      * @param {string} foto - URL o ruta de la foto
      */
     agregarFoto(foto) {
-        if (typeof foto !== 'string' || foto.trim().length === 0) {
+        if (typeof foto !== 'string' || !foto || foto.trim().length === 0) {
             throw new Error('Foto debe ser una string válida');
         }
         
@@ -275,7 +278,7 @@ class Seguimiento {
         return {
             _id: this.seguimientoId,
             clienteId: this.clienteId,
-            planId: this.planId,
+            contratoId: this.contratoId,
             fecha: this.fecha,
             peso: this.peso,
             grasaCorporal: this.grasaCorporal,
@@ -294,7 +297,7 @@ class Seguimiento {
         return new Seguimiento({
             seguimientoId: mongoDoc._id,
             clienteId: mongoDoc.clienteId,
-            planId: mongoDoc.planId,
+            contratoId: mongoDoc.contratoId,
             fecha: mongoDoc.fecha,
             peso: mongoDoc.peso,
             grasaCorporal: mongoDoc.grasaCorporal,
@@ -312,7 +315,7 @@ class Seguimiento {
         return {
             seguimientoId: this.seguimientoId,
             clienteId: this.clienteId,
-            planId: this.planId,
+            contratoId: this.contratoId,
             fecha: dayjs(this.fecha).format('DD/MM/YYYY'),
             peso: this.peso,
             grasaCorporal: this.grasaCorporal,

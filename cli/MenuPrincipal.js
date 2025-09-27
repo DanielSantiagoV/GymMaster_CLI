@@ -3,6 +3,7 @@ const chalk = require('chalk');
 const ClienteCLI = require('./ClienteCLI');
 const PlanEntrenamientoCLI = require('./PlanEntrenamientoCLI');
 const ContratoCLI = require('./ContratoCLI');
+const SeguimientoCLI = require('./SeguimientoCLI');
 
 /**
  * Menú Principal del Sistema GymMaster CLI
@@ -14,6 +15,7 @@ class MenuPrincipal {
         this.clienteCLI = new ClienteCLI(db);
         this.planEntrenamientoCLI = new PlanEntrenamientoCLI(db);
         this.contratoCLI = new ContratoCLI(db);
+        this.seguimientoCLI = new SeguimientoCLI(db);
     }
 
     /**
@@ -90,7 +92,9 @@ class MenuPrincipal {
                 await this.mostrarMenuPrincipal();
                 break;
             case 'seguimiento':
-                await this.mostrarMenuSeguimiento();
+                await this.seguimientoCLI.mostrarMenuSeguimientos();
+                // Volver al menú principal después de gestionar seguimientos
+                await this.mostrarMenuPrincipal();
                 break;
             case 'nutricion':
                 await this.mostrarMenuNutricion();

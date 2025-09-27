@@ -188,7 +188,7 @@ class SeguimientoRepository {
                 throw new Error('Seguimiento no encontrado');
             }
 
-            // Iniciar transacción para rollback si es necesario
+            // Iniciar transacción para rollback
             const session = this.db.client.startSession();
             
             try {
@@ -210,7 +210,6 @@ class SeguimientoRepository {
                     }, { session });
 
                     // Si no hay otros seguimientos, podríamos considerar actualizar el estado del plan
-                    // Esto es un ejemplo de lógica de rollback específica del negocio
                     if (otrosSeguimientos === 0) {
                         console.log('⚠️ Cliente sin seguimientos - considerar actualizar estado del plan');
                     }

@@ -1,4 +1,5 @@
 const { MongoClient } = require('mongodb');
+const SimpleDatabase = require('./simple-database');
 require('dotenv').config();
 
 /**
@@ -9,7 +10,8 @@ class DatabaseConfig {
     constructor() {
         this.client = null;
         this.db = null;
-        this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+        // Usar replica set para habilitar transacciones
+        this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/?replicaSet=rs0';
         this.databaseName = process.env.MONGODB_DATABASE || 'gymmaster';
     }
 
@@ -19,16 +21,23 @@ class DatabaseConfig {
      */
     async connect() {
         try {
+            // Intentar conectar a MongoDB real
             this.client = new MongoClient(this.uri);
-
             await this.client.connect();
             this.db = this.client.db(this.databaseName);
             
             console.log(`✅ Conectado a MongoDB: ${this.databaseName}`);
             return { client: this.client, db: this.db };
         } catch (error) {
-            console.error('❌ Error al conectar con MongoDB:', error.message);
-            throw error;
+            console.log('⚠️ MongoDB no disponible, usando base de datos en memoria');
+            console.log('💡 Para usar MongoDB real, instala MongoDB siguiendo INSTALAR_MONGODB.md');
+            
+            // Usar base de datos simple
+            this.client = new SimpleDatabase();
+            this.db = this.client;
+            
+            const connection = await this.client.connect();
+            return connection;
         }
     }
 
@@ -37,8 +46,13 @@ class DatabaseConfig {
      */
     async disconnect() {
         if (this.client) {
-            await this.client.close();
-            console.log('🔌 Conexión a MongoDB cerrada');
+            if (this.client.close) {
+                await this.client.close();
+                console.log('🔌 Conexión a MongoDB cerrada');
+            } else {
+                await this.client.disconnect();
+                console.log('🔌 Conexión a base de datos en memoria cerrada');
+            }
         }
     }
 
@@ -59,6 +73,48 @@ class DatabaseConfig {
      */
     isConnected() {
         return this.client && this.client.topology && this.client.topology.isConnected();
+    }
+
+    /**
+     * Verifica si las transacciones están disponibles
+     * @returns {Promise<boolean>} True si las transacciones están disponibles
+     */
+    async areTransactionsAvailable() {
+        try {
+            if (!this.client) {
+                return false;
+            }
+            
+            // Si es base de datos simple, no hay transacciones
+            if (this.client.constructor.name === 'SimpleDatabase') {
+                return false;
+            }
+            
+            const session = this.client.startSession();
+            await session.endSession();
+            return true;
+        } catch (error) {
+            console.log('⚠️ Transacciones no disponibles:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene información del replica set
+     * @returns {Promise<Object>} Información del replica set
+     */
+    async getReplicaSetInfo() {
+        try {
+            if (!this.client) {
+                throw new Error('Cliente no conectado');
+            }
+            
+            const adminDb = this.client.db('admin');
+            const status = await adminDb.command({ replSetGetStatus: 1 });
+            return status;
+        } catch (error) {
+            throw new Error(`Error al obtener información del replica set: ${error.message}`);
+        }
     }
 }
 
