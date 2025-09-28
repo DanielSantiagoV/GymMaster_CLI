@@ -9,6 +9,7 @@ const SeguimientoRepository = require('./SeguimientoRepository');
 const NutricionRepository = require('./NutricionRepository');
 const ContratoRepository = require('./ContratoRepository');
 const FinanzasRepository = require('./FinanzasRepository');
+const PagoRepository = require('./PagoRepository');
 
 module.exports = {
     ClienteRepository,
@@ -16,5 +17,6 @@ module.exports = {
     SeguimientoRepository,
     NutricionRepository,
     ContratoRepository,
-    FinanzasRepository
+    FinanzasRepository,
+    PagoRepository
 };

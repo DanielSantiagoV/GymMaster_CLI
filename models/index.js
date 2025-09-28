@@ -9,6 +9,7 @@ const Seguimiento = require('./Seguimiento');
 const Nutricion = require('./Nutricion');
 const Contrato = require('./Contrato');
 const Finanzas = require('./Finanzas');
+const Pago = require('./Pago');
 
 module.exports = {
     Cliente,
@@ -16,5 +17,6 @@ module.exports = {
     Seguimiento,
     Nutricion,
     Contrato,
-    Finanzas
+    Finanzas,
+    Pago
 };
