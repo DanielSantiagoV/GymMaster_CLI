@@ -10,7 +10,9 @@
     "setup-replica": "node scripts/setup-replica-set.js",
     "check-replica": "node scripts/check-replica-set.js",
     "fix-mongodb": "node scripts/fix-mongodb-replica.js",
-    "start-mongodb": "scripts/start-mongodb-replica.bat"
+    "start-mongodb": "scripts/start-mongodb-replica.bat",
+    "test-rollback": "node scripts/quick-test-rollback.js",
+    "test-rollback-full": "node scripts/test-rollback.js"
   },
   "repository": {
     "type": "git",

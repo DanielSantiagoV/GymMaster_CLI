@@ -161,9 +161,27 @@ class PlanClienteService {
                     // 3. Remover el cliente del plan
                     await this.planRepository.removeClientFromPlan(planId, clienteId);
 
+                    // 4. ROLLBACK: Eliminar seguimientos del cliente
+                    const { SeguimientoRepository } = require('../repositories');
+                    const seguimientoRepository = new SeguimientoRepository(this.db);
+                    
+                    try {
+                        const rollbackSeguimientos = await seguimientoRepository.deleteFollowUpsByClientWithRollback(
+                            clienteId, 
+                            `Desasociación de plan: ${plan.nombre}`
+                        );
+                        
+                        if (rollbackSeguimientos.success && rollbackSeguimientos.eliminados > 0) {
+                            console.log(`✅ Rollback completado: ${rollbackSeguimientos.eliminados} seguimientos eliminados`);
+                        }
+                    } catch (rollbackError) {
+                        // Si falla el rollback de seguimientos, registrar pero no fallar la transacción
+                        console.log(`⚠️ Error en rollback de seguimientos: ${rollbackError.message}`);
+                    }
+
                     resultado = {
                         success: true,
-                        mensaje: 'Plan desasociado exitosamente del cliente',
+                        mensaje: 'Plan desasociado exitosamente del cliente con rollback de seguimientos',
                         contratoCancelado: !!contratoDelPlan
                     };
                 });

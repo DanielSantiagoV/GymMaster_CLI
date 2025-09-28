@@ -290,9 +290,27 @@ class ContratoService {
                     // 3. Desasociar el cliente del plan
                     await this.planRepository.removeClientFromPlan(contrato.planId, contrato.clienteId);
 
+                    // 4. ROLLBACK: Eliminar seguimientos del contrato cancelado
+                    const { SeguimientoRepository } = require('../repositories');
+                    const seguimientoRepository = new SeguimientoRepository(this.db);
+                    
+                    try {
+                        const rollbackSeguimientos = await seguimientoRepository.deleteFollowUpsByContractWithRollback(
+                            contratoId, 
+                            `Cancelación de contrato: ${motivo}`
+                        );
+                        
+                        if (rollbackSeguimientos.success && rollbackSeguimientos.eliminados > 0) {
+                            console.log(`✅ Rollback completado: ${rollbackSeguimientos.eliminados} seguimientos eliminados`);
+                        }
+                    } catch (rollbackError) {
+                        // Si falla el rollback de seguimientos, registrar pero no fallar la transacción
+                        console.log(`⚠️ Error en rollback de seguimientos: ${rollbackError.message}`);
+                    }
+
                     resultado = {
                         success: true,
-                        mensaje: 'Contrato cancelado exitosamente'
+                        mensaje: 'Contrato cancelado exitosamente con rollback de seguimientos'
                     };
                 });
 

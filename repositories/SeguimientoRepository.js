@@ -193,6 +193,127 @@ class SeguimientoRepository {
     }
 
     /**
+     * Elimina seguimientos masivamente por cliente con rollback
+     * @param {string|ObjectId} clienteId - ID del cliente
+     * @param {string} motivo - Motivo de la eliminación
+     * @returns {Promise<Object>} Resultado de la operación
+     * @throws {Error} Si hay error en el rollback
+     */
+    async deleteFollowUpsByClientWithRollback(clienteId, motivo = 'Cancelación de plan/contrato') {
+        try {
+            if (!ObjectId.isValid(clienteId)) {
+                throw new Error('ID del cliente no es válido');
+            }
+
+            // Obtener seguimientos del cliente antes de eliminarlos
+            const seguimientos = await this.getByClient(clienteId);
+            if (seguimientos.length === 0) {
+                return {
+                    success: true,
+                    eliminados: 0,
+                    mensaje: 'No hay seguimientos para eliminar'
+                };
+            }
+
+            // Iniciar transacción para rollback
+            const session = this.db.client.startSession();
+            
+            try {
+                let resultado;
+                
+                await session.withTransaction(async () => {
+                    // Eliminar todos los seguimientos del cliente
+                    const deleteResult = await this.collection.deleteMany(
+                        { clienteId: new ObjectId(clienteId) },
+                        { session }
+                    );
+
+                    if (deleteResult.deletedCount === 0) {
+                        throw new Error('No se pudieron eliminar los seguimientos');
+                    }
+
+                    // Registrar la eliminación masiva para auditoría
+                    console.log(`🗑️ Eliminados ${deleteResult.deletedCount} seguimientos del cliente ${clienteId} - Motivo: ${motivo}`);
+
+                    resultado = {
+                        success: true,
+                        eliminados: deleteResult.deletedCount,
+                        mensaje: `Se eliminaron ${deleteResult.deletedCount} seguimientos del cliente`
+                    };
+                });
+
+                return resultado;
+            } finally {
+                await session.endSession();
+            }
+        } catch (error) {
+            throw new Error(`Error al eliminar seguimientos del cliente: ${error.message}`);
+        }
+    }
+
+    /**
+     * Elimina seguimientos masivamente por contrato con rollback
+     * @param {string|ObjectId} contratoId - ID del contrato
+     * @param {string} motivo - Motivo de la eliminación
+     * @returns {Promise<Object>} Resultado de la operación
+     * @throws {Error} Si hay error en el rollback
+     */
+    async deleteFollowUpsByContractWithRollback(contratoId, motivo = 'Cancelación de contrato') {
+        try {
+            if (!ObjectId.isValid(contratoId)) {
+                throw new Error('ID del contrato no es válido');
+            }
+
+            // Obtener seguimientos del contrato antes de eliminarlos
+            const seguimientos = await this.collection.find({ 
+                contratoId: new ObjectId(contratoId) 
+            }).toArray();
+
+            if (seguimientos.length === 0) {
+                return {
+                    success: true,
+                    eliminados: 0,
+                    mensaje: 'No hay seguimientos para eliminar'
+                };
+            }
+
+            // Iniciar transacción para rollback
+            const session = this.db.client.startSession();
+            
+            try {
+                let resultado;
+                
+                await session.withTransaction(async () => {
+                    // Eliminar todos los seguimientos del contrato
+                    const deleteResult = await this.collection.deleteMany(
+                        { contratoId: new ObjectId(contratoId) },
+                        { session }
+                    );
+
+                    if (deleteResult.deletedCount === 0) {
+                        throw new Error('No se pudieron eliminar los seguimientos');
+                    }
+
+                    // Registrar la eliminación masiva para auditoría
+                    console.log(`🗑️ Eliminados ${deleteResult.deletedCount} seguimientos del contrato ${contratoId} - Motivo: ${motivo}`);
+
+                    resultado = {
+                        success: true,
+                        eliminados: deleteResult.deletedCount,
+                        mensaje: `Se eliminaron ${deleteResult.deletedCount} seguimientos del contrato`
+                    };
+                });
+
+                return resultado;
+            } finally {
+                await session.endSession();
+            }
+        } catch (error) {
+            throw new Error(`Error al eliminar seguimientos del contrato: ${error.message}`);
+        }
+    }
+
+    /**
      * Elimina un seguimiento con rollback si afecta el plan
      * @param {string|ObjectId} id - ID del seguimiento a eliminar
      * @returns {Promise<boolean>} True si se eliminó correctamente

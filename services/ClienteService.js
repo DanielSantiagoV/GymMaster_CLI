@@ -545,6 +545,24 @@ class ClienteService {
                 contratoRepository.cancelContract(contrato.contratoId.toString())
             );
             await Promise.all(cancelaciones);
+
+            // ROLLBACK: Eliminar todos los seguimientos del cliente
+            const { SeguimientoRepository } = require('../repositories');
+            const seguimientoRepository = new SeguimientoRepository(this.db);
+            
+            try {
+                const rollbackSeguimientos = await seguimientoRepository.deleteFollowUpsByClientWithRollback(
+                    cliente.clienteId, 
+                    `Eliminación de cliente: ${cliente.nombreCompleto}`
+                );
+                
+                if (rollbackSeguimientos.success && rollbackSeguimientos.eliminados > 0) {
+                    console.log(`✅ Rollback completado: ${rollbackSeguimientos.eliminados} seguimientos eliminados del cliente`);
+                }
+            } catch (rollbackError) {
+                // Si falla el rollback de seguimientos, registrar pero continuar
+                console.log(`⚠️ Error en rollback de seguimientos: ${rollbackError.message}`);
+            }
         }
     }
 }

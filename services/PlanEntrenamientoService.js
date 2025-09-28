@@ -506,14 +506,34 @@ class PlanEntrenamientoService {
         const plan = await this.planRepository.getById(planId);
         
         if (plan.tieneClientes()) {
-            // Si tiene clientes, cancelar sus contratos
+            // Si tiene clientes, cancelar sus contratos y hacer rollback de seguimientos
             const clientes = await this.planRepository.getAll({ _id: new ObjectId(planId) });
+            
             for (const cliente of clientes) {
                 const contratosActivos = await this.contratoRepository.getActiveContractsByClient(cliente.clienteId);
                 const contratoDelPlan = contratosActivos.find(c => c.planId.toString() === planId.toString());
                 
                 if (contratoDelPlan) {
+                    // Cancelar el contrato
                     await this.contratoRepository.cancelContract(contratoDelPlan.contratoId);
+                    
+                    // ROLLBACK: Eliminar seguimientos del cliente
+                    const { SeguimientoRepository } = require('../repositories');
+                    const seguimientoRepository = new SeguimientoRepository(this.db);
+                    
+                    try {
+                        const rollbackSeguimientos = await seguimientoRepository.deleteFollowUpsByClientWithRollback(
+                            cliente.clienteId, 
+                            `Cancelación de plan: ${plan.nombre}`
+                        );
+                        
+                        if (rollbackSeguimientos.success && rollbackSeguimientos.eliminados > 0) {
+                            console.log(`✅ Rollback completado para cliente ${cliente.clienteId}: ${rollbackSeguimientos.eliminados} seguimientos eliminados`);
+                        }
+                    } catch (rollbackError) {
+                        // Si falla el rollback de seguimientos, registrar pero continuar
+                        console.log(`⚠️ Error en rollback de seguimientos para cliente ${cliente.clienteId}: ${rollbackError.message}`);
+                    }
                 }
             }
         }
