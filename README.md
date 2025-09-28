@@ -504,6 +504,222 @@ class UnitOfWork {
 
 ---
 
+## 🔧 Consideraciones Técnicas
+
+### 📊 Rendimiento y Escalabilidad
+
+#### **Optimización de Consultas MongoDB**
+- **Índices Estratégicos**: Implementación de índices en campos frecuentemente consultados
+- **Aggregation Pipeline**: Uso eficiente del Aggregation Framework para consultas complejas
+- **Proyección de Campos**: Selección específica de campos para reducir transferencia de datos
+- **Paginación**: Implementación de cursor-based pagination para grandes volúmenes de datos
+
+```javascript
+// Ejemplo: Índices optimizados
+db.clientes.createIndex({ "email": 1 }, { unique: true });
+db.clientes.createIndex({ "fechaRegistro": -1 });
+db.contratos.createIndex({ "clienteId": 1, "estado": 1 });
+db.seguimiento.createIndex({ "clienteId": 1, "fecha": -1 });
+```
+
+#### **Gestión de Memoria**
+- **Streaming de Datos**: Procesamiento de grandes conjuntos de datos sin cargar todo en memoria
+- **Lazy Loading**: Carga diferida de datos relacionados
+- **Garbage Collection**: Optimización para evitar memory leaks en Node.js
+- **Connection Pooling**: Reutilización eficiente de conexiones MongoDB
+
+#### **Caching Strategy**
+- **In-Memory Cache**: Cache de datos frecuentemente accedidos
+- **TTL (Time To Live)**: Expiración automática de datos en cache
+- **Cache Invalidation**: Estrategias para invalidar cache cuando los datos cambian
+
+### 🔒 Seguridad y Autenticación
+
+#### **Validación de Datos**
+- **Input Sanitization**: Limpieza y validación de todos los inputs del usuario
+- **Schema Validation**: Validación estricta usando esquemas JSON
+- **SQL Injection Prevention**: Uso de parámetros preparados (aunque MongoDB es NoSQL)
+- **XSS Protection**: Sanitización de datos antes de mostrar en CLI
+
+```javascript
+// Ejemplo: Validación de datos
+const clienteSchema = {
+    nombre: { type: String, required: true, minLength: 2, maxLength: 50 },
+    email: { type: String, required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+    telefono: { type: String, pattern: /^\+?[\d\s\-\(\)]+$/ },
+    fechaNacimiento: { type: Date, max: new Date() }
+};
+```
+
+#### **Manejo de Errores Seguro**
+- **Error Logging**: Registro detallado de errores sin exponer información sensible
+- **Graceful Degradation**: Manejo elegante de fallos del sistema
+- **Retry Logic**: Reintentos automáticos para operaciones críticas
+- **Circuit Breaker**: Patrón para evitar cascadas de fallos
+
+#### **Auditoría y Logging**
+- **Audit Trail**: Registro de todas las operaciones críticas
+- **User Activity Logging**: Seguimiento de acciones del usuario
+- **Performance Monitoring**: Monitoreo de rendimiento en tiempo real
+- **Error Tracking**: Seguimiento detallado de errores y excepciones
+
+### 🗄️ Gestión de Datos
+
+#### **Transacciones ACID**
+- **Atomicity**: Operaciones atómicas para mantener consistencia
+- **Consistency**: Validaciones a nivel de aplicación y base de datos
+- **Isolation**: Aislamiento de transacciones concurrentes
+- **Durability**: Persistencia garantizada de datos
+
+```javascript
+// Ejemplo: Transacción ACID
+async function crearClienteConContrato(datosCliente, datosContrato) {
+    const session = client.startSession();
+    try {
+        await session.withTransaction(async () => {
+            const cliente = await db.collection('clientes').insertOne(datosCliente, { session });
+            const contrato = await db.collection('contratos').insertOne({
+                ...datosContrato,
+                clienteId: cliente.insertedId
+            }, { session });
+            return { cliente, contrato };
+        });
+    } finally {
+        await session.endSession();
+    }
+}
+```
+
+#### **Backup y Recuperación**
+- **Backup Automático**: Respaldos programados de la base de datos
+- **Point-in-Time Recovery**: Recuperación a un momento específico
+- **Data Export**: Exportación de datos en formatos estándar (CSV, JSON)
+- **Disaster Recovery**: Plan de recuperación ante desastres
+
+#### **Migración de Datos**
+- **Schema Evolution**: Evolución del esquema sin pérdida de datos
+- **Data Migration Scripts**: Scripts automatizados para migración de datos
+- **Version Control**: Control de versiones para esquemas de base de datos
+- **Rollback Capability**: Capacidad de revertir cambios en datos
+
+### 🔄 Concurrencia y Sincronización
+
+#### **Manejo de Concurrencia**
+- **Optimistic Locking**: Control de concurrencia optimista
+- **Pessimistic Locking**: Bloqueo pesimista para operaciones críticas
+- **Race Condition Prevention**: Prevención de condiciones de carrera
+- **Deadlock Avoidance**: Evitación de deadlocks en transacciones
+
+#### **Sincronización de Datos**
+- **Event Sourcing**: Patrón de almacenamiento de eventos
+- **CQRS (Command Query Responsibility Segregation)**: Separación de comandos y consultas
+- **Eventual Consistency**: Consistencia eventual para sistemas distribuidos
+- **Conflict Resolution**: Resolución de conflictos en datos concurrentes
+
+### 📈 Monitoreo y Observabilidad
+
+#### **Métricas de Rendimiento**
+- **Response Time**: Tiempo de respuesta de operaciones
+- **Throughput**: Número de operaciones por segundo
+- **Error Rate**: Tasa de errores del sistema
+- **Resource Utilization**: Utilización de CPU, memoria y disco
+
+#### **Health Checks**
+- **Database Connectivity**: Verificación de conectividad a MongoDB
+- **Service Health**: Estado de salud de todos los servicios
+- **Dependency Checks**: Verificación de dependencias externas
+- **Automated Alerts**: Alertas automáticas para problemas críticos
+
+#### **Logging Estratégico**
+- **Structured Logging**: Logs estructurados en formato JSON
+- **Log Levels**: Diferentes niveles de logging (DEBUG, INFO, WARN, ERROR)
+- **Correlation IDs**: Identificadores de correlación para rastrear requests
+- **Performance Logging**: Logs específicos para análisis de rendimiento
+
+### 🧪 Testing y Calidad
+
+#### **Estrategias de Testing**
+- **Unit Testing**: Pruebas unitarias para cada componente
+- **Integration Testing**: Pruebas de integración entre módulos
+- **End-to-End Testing**: Pruebas de extremo a extremo
+- **Performance Testing**: Pruebas de rendimiento y carga
+
+#### **Quality Assurance**
+- **Code Coverage**: Cobertura de código en pruebas
+- **Static Analysis**: Análisis estático de código
+- **Dependency Scanning**: Escaneo de vulnerabilidades en dependencias
+- **Code Review**: Revisión de código por pares
+
+#### **Continuous Integration**
+- **Automated Testing**: Ejecución automática de pruebas
+- **Build Validation**: Validación de builds automáticos
+- **Deployment Pipeline**: Pipeline de despliegue automatizado
+- **Rollback Strategy**: Estrategia de rollback automático
+
+### 🔧 Configuración y Despliegue
+
+#### **Environment Management**
+- **Environment Variables**: Gestión de variables de entorno
+- **Configuration Files**: Archivos de configuración por ambiente
+- **Secrets Management**: Gestión segura de secretos y credenciales
+- **Feature Flags**: Banderas de características para control de funcionalidades
+
+#### **Deployment Considerations**
+- **Zero-Downtime Deployment**: Despliegue sin tiempo de inactividad
+- **Blue-Green Deployment**: Estrategia de despliegue azul-verde
+- **Canary Releases**: Lanzamientos canarios para validación
+- **Rollback Procedures**: Procedimientos de rollback automatizados
+
+#### **Infrastructure as Code**
+- **Docker Containerization**: Containerización con Docker
+- **Kubernetes Orchestration**: Orquestación con Kubernetes
+- **Infrastructure Monitoring**: Monitoreo de infraestructura
+- **Auto-scaling**: Escalado automático basado en demanda
+
+### 📊 Análisis y Reportes
+
+#### **Business Intelligence**
+- **Data Analytics**: Análisis de datos de negocio
+- **Trend Analysis**: Análisis de tendencias
+- **Predictive Analytics**: Análisis predictivo
+- **Custom Reports**: Reportes personalizados
+
+#### **Performance Analytics**
+- **Query Performance**: Análisis de rendimiento de consultas
+- **Resource Usage**: Análisis de uso de recursos
+- **Bottleneck Identification**: Identificación de cuellos de botella
+- **Optimization Recommendations**: Recomendaciones de optimización
+
+### 🛡️ Resilencia y Tolerancia a Fallos
+
+#### **Fault Tolerance**
+- **Circuit Breaker Pattern**: Patrón de cortacircuitos
+- **Bulkhead Pattern**: Patrón de mamparos
+- **Timeout Handling**: Manejo de timeouts
+- **Retry Mechanisms**: Mecanismos de reintento
+
+#### **Disaster Recovery**
+- **Backup Strategies**: Estrategias de respaldo
+- **Recovery Time Objective (RTO)**: Objetivo de tiempo de recuperación
+- **Recovery Point Objective (RPO)**: Objetivo de punto de recuperación
+- **Business Continuity**: Continuidad del negocio
+
+### 📋 Consideraciones de Mantenimiento
+
+#### **Code Maintenance**
+- **Technical Debt Management**: Gestión de deuda técnica
+- **Refactoring Strategy**: Estrategia de refactoring
+- **Legacy Code Handling**: Manejo de código legacy
+- **Documentation Maintenance**: Mantenimiento de documentación
+
+#### **Operational Maintenance**
+- **Regular Updates**: Actualizaciones regulares de dependencias
+- **Security Patches**: Parches de seguridad
+- **Performance Tuning**: Ajuste de rendimiento
+- **Capacity Planning**: Planificación de capacidad
+
+---
+
 ## 📊 Funcionalidades Principales
 
 ### 👥 Gestión de Clientes
@@ -998,4 +1214,887 @@ npm run check-replica
 ├── 📄 test-config.js           # Configuración de pruebas
 └── 📄 test-connection.js       # Pruebas de conexión
 ```
+
+---
+
+## 📊 Diagramas de Arquitectura del Sistema
+
+### 🗄️ Diagrama de Entidad-Relación (ERD)
+
+```mermaid
+erDiagram
+    CLIENTE {
+        ObjectId _id PK
+        String nombre
+        String email UK
+        String telefono
+        Date fechaNacimiento
+        String direccion
+        String contactoEmergencia
+        String telefonoEmergencia
+        String historialMedico
+        String restricciones
+        String estado
+        Date fechaRegistro
+        Date fechaUltimaActualizacion
+    }
+    
+    PLAN_ENTRENAMIENTO {
+        ObjectId _id PK
+        String nombre
+        String descripcion
+        Number duracionMeses
+        String nivel
+        Array metasFisicas
+        Number precio
+        String condiciones
+        String estado
+        Date fechaCreacion
+        Date fechaUltimaActualizacion
+    }
+    
+    CONTRATO {
+        ObjectId _id PK
+        ObjectId clienteId FK
+        ObjectId planId FK
+        String numeroContrato UK
+        Date fechaInicio
+        Date fechaFin
+        Number precio
+        String condiciones
+        String estado
+        Date fechaCreacion
+        Date fechaUltimaActualizacion
+    }
+    
+    SEGUIMIENTO {
+        ObjectId _id PK
+        ObjectId clienteId FK
+        ObjectId planId FK
+        Date fecha
+        Number peso
+        Number grasaCorporal
+        Number masaMuscular
+        Object medidasCorporales
+        Array fotos
+        String comentarios
+        String observacionesEntrenador
+        Date fechaRegistro
+    }
+    
+    NUTRICION {
+        ObjectId _id PK
+        ObjectId clienteId FK
+        ObjectId planId FK
+        String nombre
+        String descripcion
+        Object objetivosNutricionales
+        Array restriccionesAlimentarias
+        Object horariosComida
+        String estado
+        Date fechaCreacion
+        Date fechaUltimaActualizacion
+    }
+    
+    CONSUMO_ALIMENTO {
+        ObjectId _id PK
+        ObjectId clienteId FK
+        ObjectId alimentoId FK
+        Number cantidad
+        Number calorias
+        String comida
+        Date fecha
+        Date fechaRegistro
+    }
+    
+    ALIMENTO {
+        ObjectId _id PK
+        String nombre
+        String categoria
+        Number caloriasPorGramo
+        Object macronutrientes
+        String descripcion
+        String estado
+        Date fechaCreacion
+    }
+    
+    FINANZAS {
+        ObjectId _id PK
+        String tipo
+        ObjectId clienteId FK
+        Number monto
+        String concepto
+        String metodoPago
+        String categoria
+        Date fecha
+        String estado
+        Date fechaRegistro
+    }
+    
+    PAGO {
+        ObjectId _id PK
+        ObjectId clienteId FK
+        ObjectId contratoId FK
+        Number monto
+        String concepto
+        String metodoPago
+        Date fechaPago
+        String estado
+        String numeroTransaccion
+        Date fechaRegistro
+    }
+    
+    REPORTE {
+        ObjectId _id PK
+        String tipo
+        ObjectId clienteId FK
+        Object parametros
+        Object datos
+        Date fechaGeneracion
+        String estado
+    }
+    
+    AUDITORIA {
+        ObjectId _id PK
+        String entidad
+        ObjectId entidadId
+        String accion
+        Object datosAnteriores
+        Object datosNuevos
+        String usuario
+        Date fechaAccion
+        String ip
+    }
+
+    %% Relaciones
+    CLIENTE ||--o{ CONTRATO : "tiene"
+    PLAN_ENTRENAMIENTO ||--o{ CONTRATO : "incluye"
+    CLIENTE ||--o{ SEGUIMIENTO : "registra"
+    PLAN_ENTRENAMIENTO ||--o{ SEGUIMIENTO : "monitorea"
+    CLIENTE ||--o{ NUTRICION : "sigue"
+    PLAN_ENTRENAMIENTO ||--o{ NUTRICION : "asocia"
+    CLIENTE ||--o{ CONSUMO_ALIMENTO : "consume"
+    ALIMENTO ||--o{ CONSUMO_ALIMENTO : "incluye"
+    CLIENTE ||--o{ FINANZAS : "genera"
+    CLIENTE ||--o{ PAGO : "realiza"
+    CONTRATO ||--o{ PAGO : "incluye"
+    CLIENTE ||--o{ REPORTE : "genera"
+    CLIENTE ||--o{ AUDITORIA : "audita"
+    PLAN_ENTRENAMIENTO ||--o{ AUDITORIA : "audita"
+    CONTRATO ||--o{ AUDITORIA : "audita"
+    SEGUIMIENTO ||--o{ AUDITORIA : "audita"
+    NUTRICION ||--o{ AUDITORIA : "audita"
+    FINANZAS ||--o{ AUDITORIA : "audita"
+    PAGO ||--o{ AUDITORIA : "audita"
+```
+
+### 🔄 Diagrama de Flujo de Datos (DFD)
+
+```mermaid
+flowchart TD
+    %% Entidades Externas
+    A[👤 Cliente] 
+    B[🏋️ Entrenador]
+    C[💰 Sistema Financiero]
+    D[📊 Sistema de Reportes]
+    
+    %% Procesos Principales
+    E[📝 Gestión de Clientes]
+    F[📋 Gestión de Planes]
+    G[📊 Seguimiento Físico]
+    H[🥗 Control Nutricional]
+    I[📄 Gestión de Contratos]
+    J[💰 Control Financiero]
+    K[📈 Generación de Reportes]
+    L[🔍 Sistema de Auditoría]
+    
+    %% Almacenes de Datos
+    M[(🗄️ Base de Datos MongoDB)]
+    N[(📁 Archivos de Exportación)]
+    O[(📋 Logs de Auditoría)]
+    
+    %% Flujos de Datos
+    A -->|Datos Personales| E
+    A -->|Consultas| E
+    A -->|Progreso Físico| G
+    A -->|Consumo Alimentario| H
+    A -->|Pagos| J
+    
+    B -->|Crear Planes| F
+    B -->|Registrar Seguimiento| G
+    B -->|Crear Planes Nutricionales| H
+    B -->|Consultar Reportes| K
+    
+    C -->|Transacciones| J
+    D -->|Datos Exportados| N
+    
+    %% Procesos a Almacenes
+    E <-->|CRUD Clientes| M
+    F <-->|CRUD Planes| M
+    G <-->|CRUD Seguimiento| M
+    H <-->|CRUD Nutrición| M
+    I <-->|CRUD Contratos| M
+    J <-->|CRUD Finanzas| M
+    K <-->|Consultas| M
+    L <-->|Registro| O
+    
+    %% Exportaciones
+    K -->|Exportar Datos| N
+    L -->|Logs| O
+    
+    %% Transacciones entre Procesos
+    E -.->|Asociar Cliente| F
+    F -.->|Generar Contrato| I
+    I -.->|Registrar Pago| J
+    G -.->|Actualizar Progreso| K
+    H -.->|Actualizar Nutrición| K
+    J -.->|Actualizar Finanzas| K
+    
+    %% Auditoría
+    E -.->|Auditar| L
+    F -.->|Auditar| L
+    G -.->|Auditar| L
+    H -.->|Auditar| L
+    I -.->|Auditar| L
+    J -.->|Auditar| L
+```
+
+### 🏗️ Diagrama de Arquitectura del Sistema
+
+```mermaid
+graph TB
+    %% Capa de Presentación
+    subgraph "🖥️ Capa de Presentación"
+        CLI[CLI Interface]
+        MENU[Menu Principal]
+        CLI_CLIENTE[Cliente CLI]
+        CLI_PLAN[Plan CLI]
+        CLI_SEGUIMIENTO[Seguimiento CLI]
+        CLI_NUTRICION[Nutrición CLI]
+        CLI_CONTRATO[Contrato CLI]
+        CLI_FINANZAS[Finanzas CLI]
+        CLI_REPORTES[Reportes CLI]
+    end
+    
+    %% Capa de Servicios
+    subgraph "⚙️ Capa de Servicios"
+        SERVICE_CLIENTE[Cliente Service]
+        SERVICE_PLAN[Plan Service]
+        SERVICE_SEGUIMIENTO[Seguimiento Service]
+        SERVICE_NUTRICION[Nutrición Service]
+        SERVICE_CONTRATO[Contrato Service]
+        SERVICE_FINANZAS[Finanzas Service]
+        SERVICE_REPORTES[Reportes Service]
+        SERVICE_BUSQUEDA[Búsqueda Service]
+        SERVICE_PROGRESO[Progreso Service]
+    end
+    
+    %% Capa de Repositorios
+    subgraph "🗄️ Capa de Repositorios"
+        REPO_CLIENTE[Cliente Repository]
+        REPO_PLAN[Plan Repository]
+        REPO_SEGUIMIENTO[Seguimiento Repository]
+        REPO_NUTRICION[Nutrición Repository]
+        REPO_CONTRATO[Contrato Repository]
+        REPO_FINANZAS[Finanzas Repository]
+        REPO_PAGO[Pago Repository]
+    end
+    
+    %% Capa de Modelos
+    subgraph "📋 Capa de Modelos"
+        MODEL_CLIENTE[Cliente Model]
+        MODEL_PLAN[Plan Model]
+        MODEL_SEGUIMIENTO[Seguimiento Model]
+        MODEL_NUTRICION[Nutrición Model]
+        MODEL_CONTRATO[Contrato Model]
+        MODEL_FINANZAS[Finanzas Model]
+        MODEL_PAGO[Pago Model]
+    end
+    
+    %% Base de Datos
+    subgraph "💾 Persistencia"
+        MONGODB[(MongoDB Database)]
+        COLLECTIONS[Collections]
+        INDEXES[Índices]
+        TRANSACTIONS[Transacciones]
+    end
+    
+    %% Configuración
+    subgraph "⚙️ Configuración"
+        CONFIG[Config Manager]
+        CONNECTION[Connection Manager]
+        ENV[Environment Variables]
+    end
+    
+    %% Conexiones entre capas
+    CLI --> MENU
+    MENU --> CLI_CLIENTE
+    MENU --> CLI_PLAN
+    MENU --> CLI_SEGUIMIENTO
+    MENU --> CLI_NUTRICION
+    MENU --> CLI_CONTRATO
+    MENU --> CLI_FINANZAS
+    MENU --> CLI_REPORTES
+    
+    CLI_CLIENTE --> SERVICE_CLIENTE
+    CLI_PLAN --> SERVICE_PLAN
+    CLI_SEGUIMIENTO --> SERVICE_SEGUIMIENTO
+    CLI_NUTRICION --> SERVICE_NUTRICION
+    CLI_CONTRATO --> SERVICE_CONTRATO
+    CLI_FINANZAS --> SERVICE_FINANZAS
+    CLI_REPORTES --> SERVICE_REPORTES
+    
+    SERVICE_CLIENTE --> REPO_CLIENTE
+    SERVICE_PLAN --> REPO_PLAN
+    SERVICE_SEGUIMIENTO --> REPO_SEGUIMIENTO
+    SERVICE_NUTRICION --> REPO_NUTRICION
+    SERVICE_CONTRATO --> REPO_CONTRATO
+    SERVICE_FINANZAS --> REPO_FINANZAS
+    SERVICE_REPORTES --> REPO_CLIENTE
+    SERVICE_REPORTES --> REPO_PLAN
+    SERVICE_REPORTES --> REPO_SEGUIMIENTO
+    
+    REPO_CLIENTE --> MODEL_CLIENTE
+    REPO_PLAN --> MODEL_PLAN
+    REPO_SEGUIMIENTO --> MODEL_SEGUIMIENTO
+    REPO_NUTRICION --> MODEL_NUTRICION
+    REPO_CONTRATO --> MODEL_CONTRATO
+    REPO_FINANZAS --> MODEL_FINANZAS
+    REPO_PAGO --> MODEL_PAGO
+    
+    MODEL_CLIENTE --> MONGODB
+    MODEL_PLAN --> MONGODB
+    MODEL_SEGUIMIENTO --> MONGODB
+    MODEL_NUTRICION --> MONGODB
+    MODEL_CONTRATO --> MONGODB
+    MODEL_FINANZAS --> MONGODB
+    MODEL_PAGO --> MONGODB
+    
+    CONFIG --> CONNECTION
+    CONNECTION --> MONGODB
+    ENV --> CONFIG
+```
+
+### 🔄 Diagrama de Flujo de Transacciones
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant CLI as CLI Interface
+    participant S as Service Layer
+    participant R as Repository
+    participant DB as MongoDB
+    participant A as Auditoría
+    
+    Note over U,A: Flujo de Creación de Cliente con Plan
+    
+    U->>CLI: Crear Cliente
+    CLI->>S: ClienteService.crearCliente()
+    S->>R: ClienteRepository.create()
+    R->>DB: insertOne(cliente)
+    DB-->>R: clienteId
+    R-->>S: Cliente creado
+    S-->>CLI: Cliente creado
+    CLI-->>U: Cliente creado exitosamente
+    
+    U->>CLI: Asignar Plan
+    CLI->>S: PlanService.asignarPlan()
+    
+    Note over S,DB: Transacción ACID
+    S->>DB: startSession()
+    S->>DB: startTransaction()
+    
+    S->>R: PlanRepository.findById()
+    R->>DB: findOne(plan)
+    DB-->>R: plan data
+    R-->>S: plan encontrado
+    
+    S->>R: ClientePlanRepository.create()
+    R->>DB: insertOne(clientePlan)
+    DB-->>R: asociación creada
+    
+    S->>R: ContratoRepository.create()
+    R->>DB: insertOne(contrato)
+    DB-->>R: contrato creado
+    
+    S->>DB: commitTransaction()
+    DB-->>S: transacción exitosa
+    S->>DB: endSession()
+    
+    S->>A: AuditoriaService.registrar()
+    A->>DB: insertOne(auditoria)
+    
+    S-->>CLI: Plan asignado exitosamente
+    CLI-->>U: Plan asignado con contrato generado
+    
+    Note over U,A: Flujo de Rollback en caso de error
+    
+    U->>CLI: Eliminar Seguimiento
+    CLI->>S: SeguimientoService.eliminar()
+    
+    S->>R: SeguimientoRepository.verificarDependencias()
+    R->>DB: find(dependencias)
+    DB-->>R: dependencias encontradas
+    
+    alt Dependencias encontradas
+        R-->>S: Error: Dependencias existentes
+        S-->>CLI: Error: No se puede eliminar
+        CLI-->>U: Error con explicación
+    else Sin dependencias
+        S->>DB: startSession()
+        S->>DB: startTransaction()
+        
+        S->>R: SeguimientoRepository.delete()
+        R->>DB: deleteOne(seguimiento)
+        
+        S->>R: ClienteRepository.actualizarEstadisticas()
+        R->>DB: updateOne(estadisticas)
+        
+        S->>DB: commitTransaction()
+        S->>A: AuditoriaService.registrarEliminacion()
+        
+        S-->>CLI: Seguimiento eliminado
+        CLI-->>U: Eliminación exitosa
+    end
+```
+
+### 📊 Diagrama de Estados del Sistema
+
+```mermaid
+stateDiagram-v2
+    [*] --> Inicializacion
+    
+    Inicializacion --> ConectandoMongoDB : Verificar conexión
+    ConectandoMongoDB --> ConfiguracionCompleta : Conexión exitosa
+    ConectandoMongoDB --> ErrorConexion : Error de conexión
+    ErrorConexion --> [*] : Salir del sistema
+    
+    ConfiguracionCompleta --> MenuPrincipal : Sistema listo
+    
+    MenuPrincipal --> GestionClientes : Opción 1
+    MenuPrincipal --> GestionPlanes : Opción 2
+    MenuPrincipal --> SeguimientoFisico : Opción 3
+    MenuPrincipal --> ControlNutricional : Opción 4
+    MenuPrincipal --> GestionContratos : Opción 5
+    MenuPrincipal --> ControlFinanciero : Opción 6
+    MenuPrincipal --> ReportesEstadisticas : Opción 7
+    MenuPrincipal --> ConfiguracionSistema : Opción 8
+    MenuPrincipal --> [*] : Opción 9 (Salir)
+    
+    GestionClientes --> MenuPrincipal : Volver
+    GestionPlanes --> MenuPrincipal : Volver
+    SeguimientoFisico --> MenuPrincipal : Volver
+    ControlNutricional --> MenuPrincipal : Volver
+    GestionContratos --> MenuPrincipal : Volver
+    ControlFinanciero --> MenuPrincipal : Volver
+    ReportesEstadisticas --> MenuPrincipal : Volver
+    ConfiguracionSistema --> MenuPrincipal : Volver
+    
+    state GestionClientes {
+        [*] --> ListarClientes
+        ListarClientes --> CrearCliente : Crear
+        ListarClientes --> ActualizarCliente : Actualizar
+        ListarClientes --> EliminarCliente : Eliminar
+        ListarClientes --> BuscarCliente : Buscar
+        CrearCliente --> ListarClientes : Completado
+        ActualizarCliente --> ListarClientes : Completado
+        EliminarCliente --> ListarClientes : Completado
+        BuscarCliente --> ListarClientes : Completado
+    }
+    
+    state GestionPlanes {
+        [*] --> ListarPlanes
+        ListarPlanes --> CrearPlan : Crear
+        ListarPlanes --> AsignarPlan : Asignar
+        ListarPlanes --> RenovarPlan : Renovar
+        ListarPlanes --> CancelarPlan : Cancelar
+        CrearPlan --> ListarPlanes : Completado
+        AsignarPlan --> ListarPlanes : Completado
+        RenovarPlan --> ListarPlanes : Completado
+        CancelarPlan --> ListarPlanes : Completado
+    }
+    
+    state SeguimientoFisico {
+        [*] --> ListarSeguimientos
+        ListarSeguimientos --> RegistrarProgreso : Registrar
+        ListarSeguimientos --> VerProgreso : Ver
+        ListarSeguimientos --> EliminarRegistro : Eliminar
+        RegistrarProgreso --> ListarSeguimientos : Completado
+        VerProgreso --> ListarSeguimientos : Completado
+        EliminarRegistro --> ListarSeguimientos : Completado
+    }
+```
+
+---
+
+## 🎯 Funcionalidades Mínimas Implementadas
+
+### 👥 Gestión de Clientes
+
+#### **Operaciones CRUD Completas**
+- **Crear Clientes**: Registro completo con validaciones estrictas
+  - Datos personales (nombre, email, teléfono, fecha de nacimiento)
+  - Información de contacto y emergencia
+  - Historial médico y restricciones
+  - Validación de unicidad de email
+
+- **Listar Clientes**: Visualización organizada y filtrable
+  - Lista completa con paginación
+  - Filtros por estado, plan activo, fecha de registro
+  - Búsqueda por nombre, email o teléfono
+  - Ordenamiento por diferentes criterios
+
+- **Actualizar Clientes**: Modificación segura de datos
+  - Actualización de información personal
+  - Cambio de estado del cliente
+  - Modificación de datos de contacto
+  - Historial de cambios auditado
+
+- **Eliminar Clientes**: Eliminación con validaciones
+  - Verificación de dependencias (contratos activos)
+  - Eliminación lógica (soft delete) por defecto
+  - Eliminación física solo si no hay dependencias
+  - Rollback automático en caso de error
+
+#### **Asociación con Planes de Entrenamiento**
+- **Asignación Múltiple**: Un cliente puede tener varios planes
+- **Validación de Compatibilidad**: Verificación de restricciones médicas
+- **Historial de Planes**: Seguimiento de todos los planes asignados
+- **Estados de Asociación**: Activo, pausado, finalizado, cancelado
+
+**Implementación Técnica:**
+```javascript
+// Ejemplo: Asociación cliente-plan
+async function asociarClientePlan(clienteId, planId, datosContrato) {
+    const session = client.startSession();
+    try {
+        await session.withTransaction(async () => {
+            // Verificar que el cliente existe
+            const cliente = await ClienteRepository.findById(clienteId);
+            if (!cliente) throw new Error('Cliente no encontrado');
+            
+            // Verificar que el plan existe
+            const plan = await PlanRepository.findById(planId);
+            if (!plan) throw new Error('Plan no encontrado');
+            
+            // Crear asociación
+            await ClientePlanRepository.create({
+                clienteId,
+                planId,
+                fechaInicio: new Date(),
+                estado: 'activo'
+            });
+            
+            // Generar contrato automáticamente
+            await ContratoService.generarContrato(clienteId, planId, datosContrato);
+        });
+    } finally {
+        await session.endSession();
+    }
+}
+```
+
+### 📋 Gestión de Planes de Entrenamiento
+
+#### **Creación de Planes Personalizados**
+- **Estructura Completa**: Nombre, duración, metas físicas, nivel
+- **Niveles de Dificultad**: Principiante, intermedio, avanzado
+- **Metas Específicas**: Objetivos cuantificables y medibles
+- **Duración Flexible**: Planes de 1, 3, 6, 12 meses o personalizados
+
+#### **Asociación Automática con Contratos**
+- **Generación Automática**: Contrato creado al asignar plan
+- **Campos Obligatorios**: Condiciones, duración, precio, fechas
+- **Validaciones**: Verificación de compatibilidad cliente-plan
+- **Estados de Plan**: Activo, pausado, finalizado, cancelado
+
+#### **Gestión de Estados de Planes**
+- **Renovación**: Extensión automática con nuevos términos
+- **Cancelación**: Cancelación con rollback de datos relacionados
+- **Finalización**: Cierre completo con archivo de historial
+- **Pausa Temporal**: Suspensión temporal sin pérdida de datos
+
+**Implementación Técnica:**
+```javascript
+// Ejemplo: Gestión de estados de planes
+class PlanEntrenamientoService {
+    async renovarPlan(planId, nuevaDuracion, nuevosTerminos) {
+        const session = client.startSession();
+        try {
+            await session.withTransaction(async () => {
+                // Actualizar plan existente
+                await PlanRepository.update(planId, {
+                    fechaFin: new Date(Date.now() + nuevaDuracion),
+                    estado: 'renovado',
+                    terminos: nuevosTerminos
+                });
+                
+                // Crear nuevo contrato
+                await ContratoService.crearContratoRenovacion(planId, nuevosTerminos);
+                
+                // Notificar al cliente
+                await NotificacionService.enviarRenovacion(planId);
+            });
+        } finally {
+            await session.endSession();
+        }
+    }
+    
+    async cancelarPlan(planId, motivo) {
+        // Implementación de cancelación con rollback
+        return await this.ejecutarCancelacionConRollback(planId, motivo);
+    }
+}
+```
+
+### 📊 Seguimiento Físico
+
+#### **Registro de Avances Semanales**
+- **Métricas Corporales**: Peso, grasa corporal, masa muscular
+- **Medidas Corporales**: Circunferencias, pliegues cutáneos
+- **Documentación Visual**: Fotos de progreso (antes/después)
+- **Comentarios Detallados**: Observaciones del entrenador y cliente
+
+#### **Visualización de Progreso**
+- **Historial Cronológico**: Evolución temporal de todas las métricas
+- **Gráficos de Progreso**: Visualización de tendencias
+- **Comparativas**: Comparación con objetivos y períodos anteriores
+- **Reportes Automáticos**: Resúmenes semanales y mensuales
+
+#### **Gestión de Registros con Rollback**
+- **Eliminación Segura**: Verificación de impacto en consistencia
+- **Rollback Automático**: Recuperación de datos relacionados
+- **Validación de Dependencias**: Verificación antes de eliminar
+- **Auditoría Completa**: Registro de todas las operaciones
+
+**Implementación Técnica:**
+```javascript
+// Ejemplo: Seguimiento con rollback
+class SeguimientoService {
+    async eliminarRegistroSeguimiento(registroId) {
+        const session = client.startSession();
+        try {
+            await session.withTransaction(async () => {
+                // Verificar dependencias
+                const dependencias = await this.verificarDependencias(registroId);
+                if (dependencias.length > 0) {
+                    throw new Error('No se puede eliminar: existen dependencias');
+                }
+                
+                // Eliminar registro
+                await SeguimientoRepository.delete(registroId);
+                
+                // Actualizar estadísticas del cliente
+                await this.actualizarEstadisticasCliente(registroId);
+                
+                // Registrar en auditoría
+                await AuditoriaService.registrarEliminacion(registroId);
+            });
+        } catch (error) {
+            // Rollback automático en caso de error
+            await this.ejecutarRollback(registroId);
+            throw error;
+        } finally {
+            await session.endSession();
+        }
+    }
+}
+```
+
+### 🥗 Nutrición
+
+#### **Planes de Alimentación Personalizados**
+- **Asociación Completa**: Vinculación con cliente y plan de entrenamiento
+- **Objetivos Nutricionales**: Metas calóricas y macronutrientes
+- **Restricciones Alimentarias**: Alergias, intolerancias, preferencias
+- **Horarios de Comida**: Distribución de comidas según el plan
+
+#### **Registro Diario de Alimentos**
+- **Base de Datos Nutricional**: Catálogo completo de alimentos
+- **Cálculo Automático**: Calorías y macronutrientes por porción
+- **Registro por Comidas**: Desayuno, almuerzo, cena, snacks
+- **Validación Nutricional**: Verificación de objetivos diarios
+
+#### **Reportes Nutricionales**
+- **Análisis Semanal**: Resumen de consumo calórico y nutricional
+- **Comparación con Objetivos**: Desviaciones y recomendaciones
+- **Tendencias Nutricionales**: Evolución del consumo alimentario
+- **Alertas Nutricionales**: Notificaciones por desviaciones importantes
+
+**Implementación Técnica:**
+```javascript
+// Ejemplo: Sistema nutricional
+class NutricionService {
+    async registrarAlimento(clienteId, alimentoId, cantidad, comida, fecha) {
+        const session = client.startSession();
+        try {
+            await session.withTransaction(async () => {
+                // Obtener información nutricional del alimento
+                const alimento = await AlimentoRepository.findById(alimentoId);
+                const calorias = alimento.caloriasPorGramo * cantidad;
+                
+                // Registrar consumo
+                await ConsumoAlimentoRepository.create({
+                    clienteId,
+                    alimentoId,
+                    cantidad,
+                    calorias,
+                    comida,
+                    fecha: new Date(fecha)
+                });
+                
+                // Actualizar totales diarios
+                await this.actualizarTotalesDiarios(clienteId, fecha, calorias);
+                
+                // Verificar objetivos nutricionales
+                await this.verificarObjetivosNutricionales(clienteId, fecha);
+            });
+        } finally {
+            await session.endSession();
+        }
+    }
+    
+    async generarReporteNutricionalSemanal(clienteId, fechaInicio) {
+        // Implementación de reporte nutricional semanal
+        return await this.calcularReporteSemanal(clienteId, fechaInicio);
+    }
+}
+```
+
+### 📄 Contratos
+
+#### **Generación Automática**
+- **Creación Automática**: Contrato generado al asignar plan
+- **Campos Obligatorios**: Condiciones, duración, precio, fechas
+- **Plantillas Personalizables**: Diferentes tipos de contrato por plan
+- **Validaciones Legales**: Verificación de términos y condiciones
+
+#### **Gestión de Contratos**
+- **Estados de Contrato**: Activo, suspendido, finalizado, cancelado
+- **Renovación Automática**: Extensión con nuevos términos
+- **Modificaciones**: Cambios con historial de versiones
+- **Archivo**: Almacenamiento permanente de contratos finalizados
+
+**Implementación Técnica:**
+```javascript
+// Ejemplo: Gestión de contratos
+class ContratoService {
+    async generarContrato(clienteId, planId, datosAdicionales) {
+        const session = client.startSession();
+        try {
+            await session.withTransaction(async () => {
+                // Obtener datos del cliente y plan
+                const cliente = await ClienteRepository.findById(clienteId);
+                const plan = await PlanRepository.findById(planId);
+                
+                // Crear contrato
+                const contrato = await ContratoRepository.create({
+                    clienteId,
+                    planId,
+                    numeroContrato: await this.generarNumeroContrato(),
+                    fechaInicio: new Date(),
+                    fechaFin: new Date(Date.now() + plan.duracion),
+                    precio: plan.precio,
+                    condiciones: plan.condiciones,
+                    estado: 'activo',
+                    ...datosAdicionales
+                });
+                
+                // Notificar al cliente
+                await NotificacionService.enviarContrato(cliente.email, contrato);
+                
+                return contrato;
+            });
+        } finally {
+            await session.endSession();
+        }
+    }
+}
+```
+
+### 💰 Gestión Financiera
+
+#### **Registro de Ingresos**
+- **Mensualidades**: Pagos recurrentes de planes
+- **Sesiones Individuales**: Clases personalizadas
+- **Servicios Adicionales**: Suplementos, equipamiento
+- **Categorización**: Clasificación por tipo de ingreso
+
+#### **Registro de Egresos**
+- **Gastos Operativos**: Mantenimiento, servicios, personal
+- **Inversiones**: Equipamiento, mejoras
+- **Servicios Externos**: Contrataciones, consultorías
+- **Gastos Variables**: Suministros, marketing
+
+#### **Consultas Financieras**
+- **Balance General**: Ingresos vs egresos por período
+- **Análisis por Cliente**: Rentabilidad por cliente
+- **Tendencias Financieras**: Evolución de ingresos y gastos
+- **Proyecciones**: Estimaciones futuras basadas en datos históricos
+
+#### **Transacciones Atómicas**
+- **Consistencia Garantizada**: Operaciones ACID para pagos
+- **Rollback Automático**: Recuperación en caso de fallos
+- **Validaciones**: Verificación de fondos y disponibilidad
+- **Auditoría Completa**: Registro de todas las transacciones
+
+**Implementación Técnica:**
+```javascript
+// Ejemplo: Gestión financiera con transacciones
+class FinanzasService {
+    async procesarPago(clienteId, monto, concepto, metodoPago) {
+        const session = client.startSession();
+        try {
+            await session.withTransaction(async () => {
+                // Verificar disponibilidad de fondos
+                const balance = await this.obtenerBalance();
+                if (balance < monto) {
+                    throw new Error('Fondos insuficientes');
+                }
+                
+                // Registrar ingreso
+                const ingreso = await IngresoRepository.create({
+                    clienteId,
+                    monto,
+                    concepto,
+                    metodoPago,
+                    fecha: new Date(),
+                    estado: 'procesado'
+                });
+                
+                // Actualizar balance
+                await this.actualizarBalance(monto);
+                
+                // Registrar en auditoría
+                await AuditoriaService.registrarTransaccion(ingreso);
+                
+                return ingreso;
+            });
+        } finally {
+            await session.endSession();
+        }
+    }
+    
+    async consultarBalanceFinanciero(fechaInicio, fechaFin, clienteId = null) {
+        // Implementación de consulta de balance
+        return await this.calcularBalance(fechaInicio, fechaFin, clienteId);
+    }
+}
+```
+
+### 🔄 Integración y Consistencia
+
+#### **Transacciones Cross-Module**
+- **Operaciones Complejas**: Múltiples módulos en una transacción
+- **Rollback Coordinado**: Recuperación consistente entre módulos
+- **Validaciones Cruzadas**: Verificación de integridad entre entidades
+- **Sincronización**: Mantenimiento de consistencia de datos
+
+#### **Auditoría y Trazabilidad**
+- **Log Completo**: Registro de todas las operaciones
+- **Trazabilidad**: Seguimiento de cambios en el tiempo
+- **Responsabilidad**: Identificación de usuarios y operaciones
+- **Recuperación**: Capacidad de restaurar estados anteriores
+
+---
 
