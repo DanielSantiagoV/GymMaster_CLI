@@ -7,6 +7,7 @@ const SeguimientoCLI = require('./SeguimientoCLI');
 const NutricionCLI = require('./NutricionCLI');
 const FinanzasCLI = require('./FinanzasCLI');
 const ReportesCLI = require('./ReportesCLI');
+const ConfigCLI = require('./ConfigCLI');
 
 /**
  * Menú Principal del Sistema GymMaster CLI
@@ -22,6 +23,7 @@ class MenuPrincipal {
         this.nutricionCLI = new NutricionCLI(db);
         this.finanzasCLI = new FinanzasCLI(db);
         this.reportesCLI = new ReportesCLI(db);
+        this.configCLI = new ConfigCLI(db);
     }
 
     /**
@@ -121,7 +123,9 @@ class MenuPrincipal {
                 await this.mostrarMenuPrincipal();
                 break;
             case 'configuracion':
-                await this.mostrarMenuConfiguracion();
+                await this.configCLI.mostrarMenuConfiguracion();
+                // Volver al menú principal después de gestionar configuración
+                await this.mostrarMenuPrincipal();
                 break;
             case 'salir':
                 await this.salir();
@@ -179,24 +183,6 @@ class MenuPrincipal {
 
 
 
-    /**
-     * Muestra el menú de configuración (placeholder)
-     */
-    async mostrarMenuConfiguracion() {
-        console.log(chalk.yellow('\n⚙️  Configuración'));
-        console.log(chalk.gray('Esta funcionalidad estará disponible próximamente...\n'));
-        
-        const continuar = await inquirer.prompt([{
-            type: 'confirm',
-            name: 'continuar',
-            message: '¿Deseas volver al menú principal?',
-            default: true
-        }]);
-
-        if (continuar.continuar) {
-            await this.mostrarMenuPrincipal();
-        }
-    }
 
     /**
      * Maneja la salida del sistema
