@@ -1,0 +1,5 @@
+clienteId,nombre,email,activo,fechaRegistro,cantidadPlanes
+68d8818da77336ed6b4ff3a0,Santiago romero,romero@gmail.com,true,Sun Sep 28 2025 02:30:05 GMT+0200 (Central European Summer Time),
+68d5f17acf21e42469acd019,Daniel vinasco,vinascodaniel9@gmail.com,true,Fri Sep 26 2025 03:50:50 GMT+0200 (Central European Summer Time),1
+68d5f0b8f6e50e458d385245,María González,maria.gonzalez@test.com,true,Fri Sep 26 2025 03:47:36 GMT+0200 (Central European Summer Time),
+68d5eeab6386c106978c0e47,Juan Pérez,juan.perez@test.com,true,Fri Sep 26 2025 03:38:51 GMT+0200 (Central European Summer Time),

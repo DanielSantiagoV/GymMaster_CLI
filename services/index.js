@@ -14,6 +14,7 @@ const BusquedaService = require('./BusquedaService');
 const PlantillasNutricionService = require('./PlantillasNutricionService');
 const ClienteIntegradoService = require('./ClienteIntegradoService');
 const FinanzasService = require('./FinanzasService');
+const ReportesService = require('./ReportesService');
 
 module.exports = {
     ClienteService,
@@ -26,5 +27,6 @@ module.exports = {
     BusquedaService,
     PlantillasNutricionService,
     ClienteIntegradoService,
-    FinanzasService
+    FinanzasService,
+    ReportesService
 };
