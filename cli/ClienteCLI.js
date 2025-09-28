@@ -1,6 +1,7 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const { ClienteService, PlanClienteService } = require('../services/index');
+const ClienteIntegradoService = require('../services/ClienteIntegradoService');
 const { ObjectId } = require('mongodb');
 
 /**
@@ -11,6 +12,7 @@ class ClienteCLI {
     constructor(db) {
         this.clienteService = new ClienteService(db);
         this.planClienteService = new PlanClienteService(db);
+        this.clienteIntegradoService = new ClienteIntegradoService(db);
     }
 
     /**
@@ -51,6 +53,10 @@ class ClienteCLI {
                         value: 'estadisticas'
                     },
                     {
+                        name: '🔍 Ver Cliente Completo (Planes + Seguimientos + Nutrición)',
+                        value: 'completo'
+                    },
+                    {
                         name: '🔗 Gestionar Planes del Cliente',
                         value: 'planes'
                     },
@@ -82,6 +88,9 @@ class ClienteCLI {
                 break;
             case 'estadisticas':
                 await this.mostrarEstadisticas();
+                break;
+            case 'completo':
+                await this.verClienteCompleto();
                 break;
             case 'planes':
                 await this.gestionarPlanesCliente();
@@ -253,6 +262,38 @@ class ClienteCLI {
                         console.log(chalk.gray(`   Registro: ${cliente.fechaRegistro}`));
                         console.log(chalk.gray(`   ID: ${cliente.clienteId}\n`));
                     });
+
+                    // Opción para ver información completa de un cliente
+                    const { verCompleto } = await inquirer.prompt([
+                        {
+                            type: 'confirm',
+                            name: 'verCompleto',
+                            message: '¿Deseas ver información completa de algún cliente?',
+                            default: false
+                        }
+                    ]);
+
+                    if (verCompleto) {
+                        const { clienteId } = await inquirer.prompt([
+                            {
+                                type: 'list',
+                                name: 'clienteId',
+                                message: 'Selecciona el cliente para ver información completa:',
+                                choices: resultado.data.map(cliente => ({
+                                    name: `${cliente.nombreCompleto} (${cliente.email})`,
+                                    value: cliente.clienteId
+                                }))
+                            }
+                        ]);
+
+                        try {
+                            console.log(chalk.yellow('\n⏳ Obteniendo información completa...'));
+                            const clienteCompleto = await this.clienteIntegradoService.obtenerClienteCompleto(clienteId);
+                            this.mostrarInformacionCompleta(clienteCompleto);
+                        } catch (error) {
+                            console.log(chalk.red(`❌ Error al obtener información completa: ${error.message}`));
+                        }
+                    }
                 } else {
                     console.log(chalk.yellow('No se encontraron clientes con los filtros aplicados.'));
                 }
@@ -589,32 +630,39 @@ class ClienteCLI {
      * Muestra estadísticas de clientes
      */
     async mostrarEstadisticas() {
-        console.log(chalk.blue('\n📊 ESTADÍSTICAS DE CLIENTES'));
+        console.log(chalk.blue('\n📊 ESTADÍSTICAS DEL SISTEMA'));
         console.log(chalk.gray('===========================\n'));
 
         try {
-            console.log(chalk.yellow('\n⏳ Cargando estadísticas...'));
+            console.log(chalk.yellow('\n⏳ Cargando estadísticas completas...'));
 
-            const estadisticas = await this.clienteService.obtenerEstadisticasClientes();
+            const estadisticas = await this.clienteIntegradoService.obtenerEstadisticasGenerales();
 
-            if (estadisticas.success) {
-                const stats = estadisticas.data;
-                
-                console.log(chalk.green('\n📈 RESUMEN GENERAL:'));
-                console.log(chalk.gray(`Total de clientes: ${chalk.cyan(stats.totalClientes)}`));
-                console.log(chalk.gray(`Clientes activos: ${chalk.green(stats.clientesActivos)}`));
-                console.log(chalk.gray(`Clientes inactivos: ${chalk.red(stats.clientesInactivos)}`));
-                console.log(chalk.gray(`Clientes con planes: ${chalk.blue(stats.clientesConPlanes)}`));
-                console.log(chalk.gray(`Clientes sin planes: ${chalk.yellow(stats.clientesSinPlanes)}`));
+            console.log(chalk.green('\n👥 CLIENTES:'));
+            console.log(chalk.gray(`Total: ${chalk.cyan(estadisticas.clientes.total)}`));
+            console.log(chalk.gray(`Activos: ${chalk.green(estadisticas.clientes.activos)}`));
+            console.log(chalk.gray(`Inactivos: ${chalk.red(estadisticas.clientes.inactivos)}`));
 
-                if (stats.registrosPorMes && stats.registrosPorMes.length > 0) {
-                    console.log(chalk.green('\n📅 REGISTROS POR MES (Últimos 12 meses):'));
-                    stats.registrosPorMes.forEach(registro => {
-                        const fecha = `${registro._id.year}/${registro._id.month.toString().padStart(2, '0')}`;
-                        console.log(chalk.gray(`${fecha}: ${chalk.cyan(registro.count)} clientes`));
-                    });
-                }
-            }
+            console.log(chalk.green('\n🏋️ PLANES DE ENTRENAMIENTO:'));
+            console.log(chalk.gray(`Total: ${chalk.cyan(estadisticas.planes.total)}`));
+            console.log(chalk.gray(`Activos: ${chalk.green(estadisticas.planes.activos)}`));
+            console.log(chalk.gray(`Inactivos: ${chalk.red(estadisticas.planes.inactivos)}`));
+
+            console.log(chalk.green('\n📋 CONTRATOS:'));
+            console.log(chalk.gray(`Total: ${chalk.cyan(estadisticas.contratos.total)}`));
+            console.log(chalk.gray(`Vigentes: ${chalk.green(estadisticas.contratos.vigentes)}`));
+            console.log(chalk.gray(`Vencidos: ${chalk.yellow(estadisticas.contratos.vencidos)}`));
+            console.log(chalk.gray(`Cancelados: ${chalk.red(estadisticas.contratos.cancelados)}`));
+
+            console.log(chalk.green('\n📈 SEGUIMIENTOS FÍSICOS:'));
+            console.log(chalk.gray(`Total: ${chalk.cyan(estadisticas.seguimientos.total)}`));
+            console.log(chalk.gray(`Este mes: ${chalk.blue(estadisticas.seguimientos.esteMes)}`));
+
+            console.log(chalk.green('\n🍎 PLANES NUTRICIONALES:'));
+            console.log(chalk.gray(`Total: ${chalk.cyan(estadisticas.planesNutricionales.total)}`));
+            console.log(chalk.gray(`Activos: ${chalk.green(estadisticas.planesNutricionales.activos)}`));
+            console.log(chalk.gray(`Pausados: ${chalk.yellow(estadisticas.planesNutricionales.pausados)}`));
+            console.log(chalk.gray(`Finalizados: ${chalk.blue(estadisticas.planesNutricionales.finalizados)}`));
 
         } catch (error) {
             console.log(chalk.red('\n❌ Error al obtener estadísticas:'));
@@ -1084,6 +1132,182 @@ class ClienteCLI {
         }
 
         await this.pausar();
+    }
+
+    /**
+     * Muestra información completa de un cliente
+     * Incluye planes de entrenamiento, contratos, seguimientos y planes nutricionales
+     */
+    async verClienteCompleto() {
+        try {
+            console.log(chalk.blue('\n🔍 VER CLIENTE COMPLETO'));
+            console.log(chalk.gray('=====================================\n'));
+
+            // Buscar cliente
+            const { termino } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'termino',
+                    message: 'Ingresa ID o nombre del cliente:',
+                    validate: input => {
+                        if (!input || input.trim() === '') {
+                            return 'Debe ingresar un término de búsqueda';
+                        }
+                        return true;
+                    }
+                }
+            ]);
+
+            console.log(chalk.yellow('\n⏳ Buscando cliente...'));
+
+            // Buscar cliente por ID o nombre
+            let cliente;
+            if (ObjectId.isValid(termino)) {
+                cliente = await this.clienteService.getClienteById(termino);
+            } else {
+                const resultado = await this.clienteService.buscarClientes(termino);
+                if (!resultado.success || resultado.data.length === 0) {
+                    console.log(chalk.red('❌ No se encontraron clientes con ese criterio'));
+                    return;
+                } else if (resultado.data.length === 1) {
+                    cliente = resultado.data[0];
+                } else {
+                    // Mostrar opciones si hay múltiples resultados
+                    const opciones = resultado.data.map(c => ({
+                        name: `${c.nombreCompleto} (${c.email})`,
+                        value: c.clienteId
+                    }));
+
+                    const { clienteId } = await inquirer.prompt([
+                        {
+                            type: 'list',
+                            name: 'clienteId',
+                            message: 'Selecciona el cliente:',
+                            choices: opciones
+                        }
+                    ]);
+
+                    cliente = await this.clienteService.getClienteById(clienteId);
+                }
+            }
+
+            if (!cliente) {
+                console.log(chalk.red('❌ Cliente no encontrado'));
+                return;
+            }
+
+            console.log(chalk.yellow('\n⏳ Obteniendo información completa...'));
+
+            // Obtener información completa del cliente
+            const clienteCompleto = await this.clienteIntegradoService.obtenerClienteCompleto(cliente.clienteId);
+
+            // Mostrar información completa
+            this.mostrarInformacionCompleta(clienteCompleto);
+
+        } catch (error) {
+            console.log(chalk.red(`❌ Error al obtener cliente completo: ${error.message}`));
+        }
+    }
+
+    /**
+     * Muestra la información completa del cliente de forma organizada
+     * @param {Object} clienteCompleto - Información completa del cliente
+     */
+    mostrarInformacionCompleta(clienteCompleto) {
+        const { cliente, contratos, planesAsignados, seguimientos, planesNutricionales, planNutricionalActivo, estadisticas } = clienteCompleto;
+
+        console.log(chalk.cyan('\n👤 INFORMACIÓN DEL CLIENTE'));
+        console.log(chalk.gray('=========================='));
+        console.log(chalk.white(`ID: ${cliente.clienteId}`));
+        console.log(chalk.white(`Nombre: ${cliente.nombreCompleto}`));
+        console.log(chalk.white(`Email: ${cliente.email}`));
+        console.log(chalk.white(`Teléfono: ${cliente.telefono || 'No registrado'}`));
+        console.log(chalk.white(`Fecha de registro: ${cliente.fechaRegistro}`));
+        console.log(chalk.white(`Estado: ${cliente.activo ? 'Activo' : 'Inactivo'}`));
+
+        // Estadísticas generales
+        console.log(chalk.cyan('\n📊 ESTADÍSTICAS'));
+        console.log(chalk.gray('================'));
+        console.log(chalk.white(`Contratos: ${estadisticas.totalContratos} (${estadisticas.contratosActivos} activos)`));
+        console.log(chalk.white(`Seguimientos: ${estadisticas.totalSeguimientos}`));
+        console.log(chalk.white(`Planes nutricionales: ${estadisticas.totalPlanesNutricionales} (${estadisticas.planesNutricionalesActivos} activos)`));
+
+        // Contratos y planes de entrenamiento
+        if (contratos.length > 0) {
+            console.log(chalk.cyan('\n🏋️ CONTRATOS Y PLANES DE ENTRENAMIENTO'));
+            console.log(chalk.gray('====================================='));
+            
+            contratos.forEach((contrato, index) => {
+                const plan = planesAsignados.find(p => p.contratoId === contrato.contratoId);
+                console.log(chalk.white(`\n${index + 1}. Contrato ${contrato.contratoId}`));
+                console.log(chalk.gray(`   Plan: ${plan ? plan.nombre : 'No encontrado'}`));
+                console.log(chalk.gray(`   Estado: ${contrato.estado}`));
+                console.log(chalk.gray(`   Fecha inicio: ${new Date(contrato.fechaInicio).toLocaleDateString()}`));
+                console.log(chalk.gray(`   Fecha fin: ${new Date(contrato.fechaFin).toLocaleDateString()}`));
+                console.log(chalk.gray(`   Precio: $${contrato.precio}`));
+            });
+        } else {
+            console.log(chalk.yellow('\n⚠️ No hay contratos registrados'));
+        }
+
+        // Seguimientos físicos
+        if (seguimientos.length > 0) {
+            console.log(chalk.cyan('\n📈 SEGUIMIENTOS FÍSICOS'));
+            console.log(chalk.gray('========================'));
+            
+            seguimientos.slice(0, 5).forEach((seguimiento, index) => {
+                console.log(chalk.white(`\n${index + 1}. Seguimiento ${seguimiento.seguimientoId}`));
+                console.log(chalk.gray(`   Fecha: ${new Date(seguimiento.fecha).toLocaleDateString()}`));
+                if (seguimiento.peso) console.log(chalk.gray(`   Peso: ${seguimiento.peso} kg`));
+                if (seguimiento.grasaCorporal) console.log(chalk.gray(`   Grasa corporal: ${seguimiento.grasaCorporal}%`));
+                if (seguimiento.medidas) {
+                    const medidas = Object.entries(seguimiento.medidas)
+                        .filter(([_, value]) => value !== null && value !== undefined)
+                        .map(([key, value]) => `${key}: ${value}cm`)
+                        .join(', ');
+                    if (medidas) console.log(chalk.gray(`   Medidas: ${medidas}`));
+                }
+                if (seguimiento.comentarios) {
+                    const comentario = seguimiento.comentarios.length > 50 
+                        ? seguimiento.comentarios.substring(0, 50) + '...' 
+                        : seguimiento.comentarios;
+                    console.log(chalk.gray(`   Comentarios: ${comentario}`));
+                }
+            });
+
+            if (seguimientos.length > 5) {
+                console.log(chalk.gray(`   ... y ${seguimientos.length - 5} seguimientos más`));
+            }
+        } else {
+            console.log(chalk.yellow('\n⚠️ No hay seguimientos registrados'));
+        }
+
+        // Plan nutricional activo
+        if (planNutricionalActivo) {
+            console.log(chalk.cyan('\n🍎 PLAN NUTRICIONAL ACTIVO'));
+            console.log(chalk.gray('=========================='));
+            console.log(chalk.white(`ID: ${planNutricionalActivo.nutricionId}`));
+            console.log(chalk.white(`Tipo: ${planNutricionalActivo.tipoPlan}`));
+            console.log(chalk.white(`Fecha creación: ${new Date(planNutricionalActivo.fechaCreacion).toLocaleDateString()}`));
+        }
+
+        // Historial de planes nutricionales
+        if (planesNutricionales.length > 0) {
+            console.log(chalk.cyan('\n🍎 HISTORIAL DE PLANES NUTRICIONALES'));
+            console.log(chalk.gray('===================================='));
+            
+            planesNutricionales.forEach((plan, index) => {
+                console.log(chalk.white(`\n${index + 1}. Plan ${plan.nutricionId}`));
+                console.log(chalk.gray(`   Tipo: ${plan.tipoPlan}`));
+                console.log(chalk.gray(`   Estado: ${plan.estado}`));
+                console.log(chalk.gray(`   Fecha: ${new Date(plan.fechaCreacion).toLocaleDateString()}`));
+                console.log(chalk.gray(`   Detalle: ${plan.detallePlan}`));
+            });
+        } else {
+            console.log(chalk.yellow('\n⚠️ No hay planes nutricionales registrados'));
+        }
+
+        console.log(chalk.green('\n✅ Información completa mostrada'));
     }
 
     /**

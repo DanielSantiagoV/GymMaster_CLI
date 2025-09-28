@@ -117,6 +117,42 @@ class ContratoRepository {
     }
 
     /**
+     * Obtiene contratos por cliente
+     * @param {string} clienteId - ID del cliente
+     * @returns {Promise<Array>} Lista de contratos del cliente
+     * @throws {Error} Si el ID no es válido o hay error en la consulta
+     */
+    async getByClient(clienteId) {
+        try {
+            if (!ObjectId.isValid(clienteId)) {
+                throw new Error('ID del cliente no es válido');
+            }
+
+            const contratosDocs = await this.collection.find({ 
+                clienteId: new ObjectId(clienteId) 
+            }).sort({ fechaInicio: -1 }).toArray();
+
+            return contratosDocs.map(doc => {
+                // Crear instancia sin validaciones para contratos existentes
+                return new Contrato({
+                    contratoId: doc._id,
+                    clienteId: doc.clienteId,
+                    planId: doc.planId,
+                    condiciones: doc.condiciones,
+                    duracionMeses: doc.duracionMeses,
+                    precio: doc.precio,
+                    fechaInicio: doc.fechaInicio,
+                    fechaFin: doc.fechaFin,
+                    estado: doc.estado,
+                    skipValidation: true
+                });
+            });
+        } catch (error) {
+            throw new Error(`Error al obtener contratos del cliente: ${error.message}`);
+        }
+    }
+
+    /**
      * Actualiza un contrato existente
      * @param {string|ObjectId} id - ID del contrato a actualizar
      * @param {Object} updatedData - Datos actualizados
@@ -591,6 +627,31 @@ class ContratoRepository {
             return await this.collection.countDocuments(query);
         } catch (error) {
             throw new Error(`Error al contar contratos: ${error.message}`);
+        }
+    }
+
+    /**
+     * Busca contratos por término de búsqueda
+     * @param {string} searchTerm - Término de búsqueda
+     * @returns {Promise<Array>} Lista de contratos encontrados
+     */
+    async search(searchTerm) {
+        try {
+            if (!searchTerm || typeof searchTerm !== 'string') {
+                throw new Error('Término de búsqueda es requerido');
+            }
+
+            const regex = new RegExp(searchTerm, 'i');
+            const cursor = this.collection.find({
+                $or: [
+                    { condicionesEspeciales: { $regex: regex } }
+                ]
+            }).sort({ fechaInicio: -1 });
+
+            const mongoObjs = await cursor.toArray();
+            return mongoObjs.map(obj => Contrato.fromMongoObject(obj));
+        } catch (error) {
+            throw new Error(`Error al buscar contratos: ${error.message}`);
         }
     }
 }

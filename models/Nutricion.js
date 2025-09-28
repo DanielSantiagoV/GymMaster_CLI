@@ -2,364 +2,310 @@ const { ObjectId } = require('mongodb');
 const dayjs = require('dayjs');
 
 /**
- * Clase Nutricion - Modelo para planes nutricionales y registro de alimentos
+ * Modelo Nutrición - Gestiona planes alimenticios personalizados
  * Implementa validaciones robustas y principios SOLID
  */
 class Nutricion {
-    constructor({ 
-        nutricionId = null, 
-        clienteId, 
-        planId, 
-        fecha = null, 
-        alimentos = [] 
-    }) {
-        this.nutricionId = nutricionId || new ObjectId();
-        this.clienteId = clienteId;
-        this.planId = planId;
-        this.fecha = fecha || new Date();
-        this.alimentos = alimentos;
+    constructor(datos) {
+        this.nutricionId = datos.nutricionId || new ObjectId();
+        this.clienteId = datos.clienteId;
+        this.contratoId = datos.contratoId || null;
+        this.fechaCreacion = datos.fechaCreacion || new Date();
+        this.tipoPlan = datos.tipoPlan;
+        this.detallePlan = datos.detallePlan || '';
+        this.evaluacionNutricional = datos.evaluacionNutricional || '';
+        this.estado = datos.estado || 'activo';
+        this.notasAdicionales = datos.notasAdicionales || '';
+        this.fechaActualizacion = datos.fechaActualizacion || new Date();
         
-        // Validar datos al crear instancia
-        this.validate();
+        // Validar datos al crear
+        this.validar();
     }
 
     /**
-     * Valida todos los campos de la nutrición
-     * @throws {Error} Si algún campo no cumple con las validaciones
+     * Valida todos los campos del modelo
+     * @throws {Error} Si algún campo no es válido
      */
-    validate() {
-        this.validateClienteId();
-        this.validatePlanId();
-        this.validateFecha();
-        this.validateAlimentos();
+    validar() {
+        this.validarClienteId();
+        this.validarContratoId();
+        this.validarFechaCreacion();
+        this.validarTipoPlan();
+        this.validarDetallePlan();
+        this.validarEvaluacionNutricional();
+        this.validarEstado();
+        this.validarNotasAdicionales();
     }
 
     /**
      * Valida el ID del cliente
      */
-    validateClienteId() {
+    validarClienteId() {
         if (!this.clienteId) {
-            throw new Error('ID del cliente es obligatorio');
+            throw new Error('ID del cliente es requerido');
         }
         if (!ObjectId.isValid(this.clienteId)) {
-            throw new Error('ID del cliente debe ser un ObjectId válido');
+            throw new Error('ID del cliente no es válido');
         }
     }
 
     /**
-     * Valida el ID del plan
+     * Valida el ID del contrato (opcional)
      */
-    validatePlanId() {
-        if (!this.planId) {
-            throw new Error('ID del plan es obligatorio');
-        }
-        if (!ObjectId.isValid(this.planId)) {
-            throw new Error('ID del plan debe ser un ObjectId válido');
+    validarContratoId() {
+        if (this.contratoId && !ObjectId.isValid(this.contratoId)) {
+            throw new Error('ID del contrato no es válido');
         }
     }
 
     /**
-     * Valida la fecha del registro nutricional
+     * Valida la fecha de creación
      */
-    validateFecha() {
-        if (!(this.fecha instanceof Date)) {
-            throw new Error('Fecha debe ser un objeto Date');
+    validarFechaCreacion() {
+        if (!(this.fechaCreacion instanceof Date)) {
+            throw new Error('Fecha de creación debe ser un objeto Date');
         }
         
-        // Verificar que no sea una fecha futura
-        if (this.fecha > new Date()) {
-            throw new Error('Fecha del registro nutricional no puede ser futura');
+        const hoy = new Date();
+        if (this.fechaCreacion > hoy) {
+            throw new Error('Fecha de creación no puede ser futura');
         }
         
-        // Verificar que no sea muy antigua (más de 1 año)
         const unAnoAtras = new Date();
         unAnoAtras.setFullYear(unAnoAtras.getFullYear() - 1);
-        
-        if (this.fecha < unAnoAtras) {
-            throw new Error('Fecha del registro nutricional no puede ser anterior a 1 año');
+        if (this.fechaCreacion < unAnoAtras) {
+            throw new Error('Fecha de creación no puede ser anterior a 1 año');
         }
     }
 
     /**
-     * Valida el array de alimentos
+     * Valida el tipo de plan nutricional
      */
-    validateAlimentos() {
-        if (!Array.isArray(this.alimentos)) {
-            throw new Error('Alimentos debe ser un array');
+    validarTipoPlan() {
+        if (!this.tipoPlan) {
+            throw new Error('Tipo de plan nutricional es requerido');
         }
         
-        // Validar cada alimento
-        for (let i = 0; i < this.alimentos.length; i++) {
-            const alimento = this.alimentos[i];
-            this.validateAlimento(alimento, i);
+        const tiposValidos = [
+            'perdida_peso',
+            'ganancia_masa',
+            'mantenimiento',
+            'deportivo',
+            'medico',
+            'personalizado'
+        ];
+        
+        if (!tiposValidos.includes(this.tipoPlan)) {
+            throw new Error(`Tipo de plan debe ser uno de: ${tiposValidos.join(', ')}`);
         }
     }
 
     /**
-     * Valida un alimento individual
-     * @param {Object} alimento - Objeto alimento a validar
-     * @param {number} index - Índice del alimento en el array
+     * Valida el detalle del plan
      */
-    validateAlimento(alimento, index) {
-        if (!alimento || typeof alimento !== 'object') {
-            throw new Error(`Alimento en posición ${index} debe ser un objeto`);
+    validarDetallePlan() {
+        if (typeof this.detallePlan !== 'string') {
+            throw new Error('Detalle del plan debe ser texto');
         }
         
-        // Validar nombre
-        if (!alimento.nombre || typeof alimento.nombre !== 'string') {
-            throw new Error(`Nombre del alimento en posición ${index} es obligatorio y debe ser string`);
+        if (this.detallePlan.length > 5000) {
+            throw new Error('Detalle del plan no puede exceder 5000 caracteres');
         }
-        if (alimento.nombre.trim().length < 2) {
-            throw new Error(`Nombre del alimento en posición ${index} debe tener al menos 2 caracteres`);
-        }
-        if (alimento.nombre.trim().length > 100) {
-            throw new Error(`Nombre del alimento en posición ${index} no puede exceder 100 caracteres`);
-        }
-        
-        // Validar calorías
-        if (alimento.calorias === undefined || alimento.calorias === null) {
-            throw new Error(`Calorías del alimento en posición ${index} son obligatorias`);
-        }
-        if (typeof alimento.calorias !== 'number') {
-            throw new Error(`Calorías del alimento en posición ${index} deben ser un número`);
-        }
-        if (alimento.calorias < 0) {
-            throw new Error(`Calorías del alimento en posición ${index} no pueden ser negativas`);
-        }
-        if (alimento.calorias > 10000) { // Máximo razonable por alimento
-            throw new Error(`Calorías del alimento en posición ${index} no pueden exceder 10000`);
-        }
-        
-        // Validar cantidad
-        if (!alimento.cantidad || typeof alimento.cantidad !== 'string') {
-            throw new Error(`Cantidad del alimento en posición ${index} es obligatoria y debe ser string`);
-        }
-        if (alimento.cantidad.trim().length < 1) {
-            throw new Error(`Cantidad del alimento en posición ${index} no puede estar vacía`);
-        }
-        if (alimento.cantidad.trim().length > 50) {
-            throw new Error(`Cantidad del alimento en posición ${index} no puede exceder 50 caracteres`);
-        }
-        
-        // Limpiar datos
-        alimento.nombre = alimento.nombre.trim();
-        alimento.cantidad = alimento.cantidad.trim();
     }
 
     /**
-     * Agrega un alimento al registro nutricional
-     * @param {string} nombre - Nombre del alimento
-     * @param {number} calorias - Calorías del alimento
-     * @param {string} cantidad - Cantidad del alimento
+     * Valida la evaluación nutricional
      */
-    agregarAlimento(nombre, calorias, cantidad) {
-        const alimento = {
-            nombre: nombre,
-            calorias: calorias,
-            cantidad: cantidad
-        };
-        
-        // Validar el alimento antes de agregarlo
-        this.validateAlimento(alimento, this.alimentos.length);
-        
-        this.alimentos.push(alimento);
-    }
-
-    /**
-     * Remueve un alimento del registro
-     * @param {number} index - Índice del alimento a remover
-     */
-    removerAlimento(index) {
-        if (index < 0 || index >= this.alimentos.length) {
-            throw new Error('Índice del alimento fuera de rango');
+    validarEvaluacionNutricional() {
+        if (typeof this.evaluacionNutricional !== 'string') {
+            throw new Error('Evaluación nutricional debe ser texto');
         }
         
-        this.alimentos.splice(index, 1);
-    }
-
-    /**
-     * Calcula el total de calorías del día
-     * @returns {number} Total de calorías
-     */
-    getTotalCalorias() {
-        return this.alimentos.reduce((total, alimento) => total + alimento.calorias, 0);
-    }
-
-    /**
-     * Calcula el promedio de calorías por alimento
-     * @returns {number} Promedio de calorías
-     */
-    getPromedioCaloriasPorAlimento() {
-        if (this.alimentos.length === 0) {
-            return 0;
+        if (this.evaluacionNutricional.length > 2000) {
+            throw new Error('Evaluación nutricional no puede exceder 2000 caracteres');
         }
-        return this.getTotalCalorias() / this.alimentos.length;
     }
 
     /**
-     * Obtiene el alimento con más calorías
-     * @returns {Object|null} Alimento con más calorías o null si no hay alimentos
+     * Valida el estado del plan
      */
-    getAlimentoMasCalorico() {
-        if (this.alimentos.length === 0) {
-            return null;
+    validarEstado() {
+        const estadosValidos = ['activo', 'pausado', 'finalizado', 'cancelado'];
+        
+        if (!estadosValidos.includes(this.estado)) {
+            throw new Error(`Estado debe ser uno de: ${estadosValidos.join(', ')}`);
+        }
+    }
+
+    /**
+     * Valida las notas adicionales
+     */
+    validarNotasAdicionales() {
+        if (typeof this.notasAdicionales !== 'string') {
+            throw new Error('Notas adicionales deben ser texto');
         }
         
-        return this.alimentos.reduce((max, alimento) => 
-            alimento.calorias > max.calorias ? alimento : max
-        );
-    }
-
-    /**
-     * Obtiene el alimento con menos calorías
-     * @returns {Object|null} Alimento con menos calorías o null si no hay alimentos
-     */
-    getAlimentoMenosCalorico() {
-        if (this.alimentos.length === 0) {
-            return null;
+        if (this.notasAdicionales.length > 1000) {
+            throw new Error('Notas adicionales no pueden exceder 1000 caracteres');
         }
-        
-        return this.alimentos.reduce((min, alimento) => 
-            alimento.calorias < min.calorias ? alimento : min
-        );
     }
 
     /**
-     * Busca alimentos por nombre
-     * @param {string} nombre - Nombre a buscar
-     * @returns {Array} Array de alimentos que coinciden
-     */
-    buscarAlimentosPorNombre(nombre) {
-        if (typeof nombre !== 'string') {
-            throw new Error('Nombre de búsqueda debe ser string');
-        }
-        
-        const nombreBusqueda = nombre.toLowerCase().trim();
-        return this.alimentos.filter(alimento => 
-            alimento.nombre.toLowerCase().includes(nombreBusqueda)
-        );
-    }
-
-    /**
-     * Obtiene alimentos con calorías en un rango específico
-     * @param {number} caloriasMin - Calorías mínimas
-     * @param {number} caloriasMax - Calorías máximas
-     * @returns {Array} Array de alimentos en el rango
-     */
-    getAlimentosPorRangoCalorias(caloriasMin, caloriasMax) {
-        if (typeof caloriasMin !== 'number' || typeof caloriasMax !== 'number') {
-            throw new Error('Los rangos de calorías deben ser números');
-        }
-        
-        if (caloriasMin < 0 || caloriasMax < 0) {
-            throw new Error('Los rangos de calorías no pueden ser negativos');
-        }
-        
-        if (caloriasMin > caloriasMax) {
-            throw new Error('Calorías mínimas no pueden ser mayores a las máximas');
-        }
-        
-        return this.alimentos.filter(alimento => 
-            alimento.calorias >= caloriasMin && alimento.calorias <= caloriasMax
-        );
-    }
-
-    /**
-     * Verifica si el registro tiene alimentos
-     * @returns {boolean} True si tiene alimentos
-     */
-    tieneAlimentos() {
-        return this.alimentos.length > 0;
-    }
-
-    /**
-     * Obtiene el número de alimentos registrados
-     * @returns {number} Cantidad de alimentos
-     */
-    getCantidadAlimentos() {
-        return this.alimentos.length;
-    }
-
-    /**
-     * Convierte la nutrición a objeto plano para MongoDB
-     * @returns {Object} Objeto listo para insertar en MongoDB
+     * Convierte el objeto a formato MongoDB
+     * @returns {Object} Objeto para MongoDB
      */
     toMongoObject() {
         return {
             _id: this.nutricionId,
-            clienteId: this.clienteId,
-            planId: this.planId,
-            fecha: this.fecha,
-            alimentos: this.alimentos
+            clienteId: new ObjectId(this.clienteId),
+            contratoId: this.contratoId ? new ObjectId(this.contratoId) : null,
+            fechaCreacion: this.fechaCreacion,
+            tipoPlan: this.tipoPlan,
+            detallePlan: this.detallePlan,
+            evaluacionNutricional: this.evaluacionNutricional,
+            estado: this.estado,
+            notasAdicionales: this.notasAdicionales,
+            fechaActualizacion: this.fechaActualizacion
         };
     }
 
     /**
-     * Crea una instancia de Nutricion desde un objeto de MongoDB
-     * @param {Object} mongoDoc - Documento de MongoDB
-     * @returns {Nutricion} Instancia de Nutricion
+     * Crea un objeto Nutrición desde un objeto MongoDB
+     * @param {Object} mongoObj - Objeto de MongoDB
+     * @returns {Nutricion} Instancia de Nutrición
      */
-    static fromMongoObject(mongoDoc) {
+    static fromMongoObject(mongoObj) {
+        if (!mongoObj) return null;
+        
         return new Nutricion({
-            nutricionId: mongoDoc._id,
-            clienteId: mongoDoc.clienteId,
-            planId: mongoDoc.planId,
-            fecha: mongoDoc.fecha,
-            alimentos: mongoDoc.alimentos || []
+            nutricionId: mongoObj._id,
+            clienteId: mongoObj.clienteId,
+            contratoId: mongoObj.contratoId,
+            fechaCreacion: mongoObj.fechaCreacion,
+            tipoPlan: mongoObj.tipoPlan,
+            detallePlan: mongoObj.detallePlan,
+            evaluacionNutricional: mongoObj.evaluacionNutricional,
+            estado: mongoObj.estado,
+            notasAdicionales: mongoObj.notasAdicionales,
+            fechaActualizacion: mongoObj.fechaActualizacion
         });
     }
 
     /**
-     * Obtiene información resumida de la nutrición
-     * @returns {Object} Información resumida
+     * Obtiene un resumen del plan nutricional
+     * @returns {Object} Resumen del plan
      */
     getResumen() {
         return {
-            nutricionId: this.nutricionId,
-            clienteId: this.clienteId,
-            planId: this.planId,
-            fecha: dayjs(this.fecha).format('DD/MM/YYYY'),
-            cantidadAlimentos: this.alimentos.length,
-            totalCalorias: this.getTotalCalorias(),
-            promedioCalorias: this.getPromedioCaloriasPorAlimento(),
-            alimentoMasCalorico: this.getAlimentoMasCalorico()?.nombre || 'N/A',
-            alimentoMenosCalorico: this.getAlimentoMenosCalorico()?.nombre || 'N/A'
+            nutricionId: this.nutricionId.toString(),
+            clienteId: this.clienteId.toString(),
+            contratoId: this.contratoId ? this.contratoId.toString() : null,
+            fechaCreacion: dayjs(this.fechaCreacion).format('DD/MM/YYYY'),
+            tipoPlan: this.getTipoPlanDescripcion(),
+            detallePlan: this.detallePlan.substring(0, 100) + (this.detallePlan.length > 100 ? '...' : ''),
+            evaluacionNutricional: this.evaluacionNutricional.substring(0, 100) + (this.evaluacionNutricional.length > 100 ? '...' : ''),
+            estado: this.estado,
+            notasAdicionales: this.notasAdicionales.substring(0, 50) + (this.notasAdicionales.length > 50 ? '...' : ''),
+            fechaActualizacion: dayjs(this.fechaActualizacion).format('DD/MM/YYYY HH:mm')
         };
     }
 
     /**
-     * Obtiene estadísticas detalladas de la nutrición
-     * @returns {Object} Estadísticas detalladas
+     * Obtiene la descripción del tipo de plan
+     * @returns {string} Descripción del tipo
      */
-    getEstadisticas() {
-        if (this.alimentos.length === 0) {
-            return {
-                totalCalorias: 0,
-                promedioCalorias: 0,
-                cantidadAlimentos: 0,
-                rangoCalorias: { min: 0, max: 0 },
-                distribucionCalorias: []
-            };
-        }
-
-        const calorias = this.alimentos.map(a => a.calorias);
-        const totalCalorias = this.getTotalCalorias();
-        const promedioCalorias = this.getPromedioCaloriasPorAlimento();
-        
-        return {
-            totalCalorias,
-            promedioCalorias,
-            cantidadAlimentos: this.alimentos.length,
-            rangoCalorias: {
-                min: Math.min(...calorias),
-                max: Math.max(...calorias)
-            },
-            distribucionCalorias: this.alimentos.map(alimento => ({
-                nombre: alimento.nombre,
-                calorias: alimento.calorias,
-                porcentaje: ((alimento.calorias / totalCalorias) * 100).toFixed(2)
-            }))
+    getTipoPlanDescripcion() {
+        const descripciones = {
+            'perdida_peso': 'Pérdida de Peso',
+            'ganancia_masa': 'Ganancia de Masa Muscular',
+            'mantenimiento': 'Mantenimiento',
+            'deportivo': 'Deportivo',
+            'medico': 'Médico',
+            'personalizado': 'Personalizado'
         };
+        
+        return descripciones[this.tipoPlan] || this.tipoPlan;
+    }
+
+    /**
+     * Verifica si el plan está activo
+     * @returns {boolean} True si está activo
+     */
+    estaActivo() {
+        return this.estado === 'activo';
+    }
+
+    /**
+     * Verifica si el plan está pausado
+     * @returns {boolean} True si está pausado
+     */
+    estaPausado() {
+        return this.estado === 'pausado';
+    }
+
+    /**
+     * Verifica si el plan está finalizado
+     * @returns {boolean} True si está finalizado
+     */
+    estaFinalizado() {
+        return this.estado === 'finalizado';
+    }
+
+    /**
+     * Verifica si el plan está cancelado
+     * @returns {boolean} True si está cancelado
+     */
+    estaCancelado() {
+        return this.estado === 'cancelado';
+    }
+
+    /**
+     * Actualiza el estado del plan
+     * @param {string} nuevoEstado - Nuevo estado
+     */
+    actualizarEstado(nuevoEstado) {
+        const estadosValidos = ['activo', 'pausado', 'finalizado', 'cancelado'];
+        
+        if (!estadosValidos.includes(nuevoEstado)) {
+            throw new Error(`Estado debe ser uno de: ${estadosValidos.join(', ')}`);
+        }
+        
+        this.estado = nuevoEstado;
+        this.fechaActualizacion = new Date();
+    }
+
+    /**
+     * Actualiza las notas adicionales
+     * @param {string} notas - Nuevas notas
+     */
+    actualizarNotas(notas) {
+        if (typeof notas !== 'string') {
+            throw new Error('Las notas deben ser texto');
+        }
+        
+        if (notas.length > 1000) {
+            throw new Error('Las notas no pueden exceder 1000 caracteres');
+        }
+        
+        this.notasAdicionales = notas;
+        this.fechaActualizacion = new Date();
+    }
+
+    /**
+     * Actualiza la evaluación nutricional
+     * @param {string} evaluacion - Nueva evaluación
+     */
+    actualizarEvaluacion(evaluacion) {
+        if (typeof evaluacion !== 'string') {
+            throw new Error('La evaluación debe ser texto');
+        }
+        
+        if (evaluacion.length > 2000) {
+            throw new Error('La evaluación no puede exceder 2000 caracteres');
+        }
+        
+        this.evaluacionNutricional = evaluacion;
+        this.fechaActualizacion = new Date();
     }
 }
 

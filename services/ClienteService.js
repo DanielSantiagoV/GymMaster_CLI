@@ -345,6 +345,28 @@ class ClienteService {
     }
 
     /**
+     * Obtiene un cliente por ID
+     * @param {string} id - ID del cliente
+     * @returns {Promise<Object>} Cliente encontrado
+     */
+    async getClienteById(id) {
+        try {
+            if (!ObjectId.isValid(id)) {
+                throw new Error('ID del cliente no es válido');
+            }
+
+            const cliente = await this.clienteRepository.getById(id);
+            if (!cliente) {
+                return null;
+            }
+
+            return cliente.getResumen();
+        } catch (error) {
+            throw new Error(`Error al obtener cliente: ${error.message}`);
+        }
+    }
+
+    /**
      * Busca clientes por término de búsqueda
      * @param {string} termino - Término de búsqueda
      * @returns {Promise<Object>} Lista de clientes que coinciden

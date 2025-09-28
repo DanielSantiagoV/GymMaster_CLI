@@ -105,6 +105,28 @@ class SeguimientoRepository {
     }
 
     /**
+     * Obtiene seguimientos por cliente
+     * @param {string} clienteId - ID del cliente
+     * @returns {Promise<Array>} Lista de seguimientos del cliente
+     * @throws {Error} Si el ID no es válido o hay error en la consulta
+     */
+    async getByClient(clienteId) {
+        try {
+            if (!ObjectId.isValid(clienteId)) {
+                throw new Error('ID del cliente no es válido');
+            }
+
+            const seguimientosDocs = await this.collection.find({ 
+                clienteId: new ObjectId(clienteId) 
+            }).sort({ fecha: -1 }).toArray();
+
+            return seguimientosDocs.map(doc => Seguimiento.fromMongoObject(doc));
+        } catch (error) {
+            throw new Error(`Error al obtener seguimientos del cliente: ${error.message}`);
+        }
+    }
+
+    /**
      * Actualiza un seguimiento existente
      * @param {string|ObjectId} id - ID del seguimiento a actualizar
      * @param {Object} updatedData - Datos actualizados
