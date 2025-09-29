@@ -1,0 +1,73 @@
+# **Guía para la sustentación del Proyecto**
+
+## ⏱ Duración: 15 minutos de presentación + 5 minutos de preguntas
+
+La sustentación es un espacio formal y profesional en el que cada integrante debe demostrar dominio completo del proyecto, tanto a nivel técnico como organizacional. Independientemente de que el proyecto se haya desarrollado de forma individual, en pareja o en grupo de tres, **se espera una exposición completa y bien estructurada, sin lecturas, improvisaciones ni vacíos técnicos**.
+
+> Nota: La participación de todos los integrantes es obligatoria. El tiempo es cerrado: a los 15 minutos, la presentación se detiene donde vaya. Los 5 minutos finales se destinan a preguntas del docente y/o audiencia, y su adecuada respuesta impactará directamente en la nota final.
+> 
+
+---
+
+## 🎯 **Estructura sugerida para la presentación (15 minutos)**
+
+### 1. Introducción y contexto (2 minutos)
+
+- ¿Qué problema resuelve esta herramienta CLI para gestión de gimnasios?
+- Breve mención del objetivo del proyecto.
+
+> Esta sección puede ser dirigida por el Product Owner o el único integrante si es individual.
+> 
+
+---
+
+### 2. Roles y organización del equipo (1 minuto)
+
+- ¿Qué rol cumplió cada integrante en el desarrollo? (Scrum Master, Product Owner, Developers)
+- ¿Qué metodología usaron y cómo organizaron los sprints?
+- ¿Qué herramienta utilizaron para planificar (Trello, GitHub Projects, etc.)?
+
+> El Scrum Master o quien haya liderado la gestión debe asumir esta parte.
+> 
+
+---
+
+### 3. Tecnologías y herramientas usadas (2 minutos)
+
+- Node.js, MongoDB (con driver oficial), inquirer, chalk, dotenv, etc.
+- Estructura del proyecto en carpetas.
+- Librerías adicionales destacadas y su propósito.
+
+---
+
+### 4. Diseño del sistema (3 minutos)
+
+- Principios SOLID aplicados (mencionar al menos tres con ejemplos).
+- Patrones de diseño usados: ¿cuáles se aplicaron? ¿dónde están en el código?
+- Validaciones dentro del modelo de datos.
+- Explicación de la arquitectura general y organización del código: carpetas `/models`, `/services`, `/commands`, etc.
+
+> Ideal que aquí participen dos integrantes si es un equipo.
+> 
+
+---
+
+### 5. Funcionalidades implementadas (5 minutos)
+
+- Recorrido rápido de la CLI:
+    - Gestión de usuarios
+    - Gestión de contratos de gimasio.
+    - etc
+- Mostrar **uno o dos flujos completos desde consola** (con capturas o ejecución en vivo, según el caso).
+- Enfatizar en las operaciones que usan transacciones en MongoDB.
+
+> Puede dividirse entre miembros o concentrarse en quien hizo el desarrollo principal.
+> 
+
+---
+
+### 6. Cierre y conclusiones (2 minutos)
+
+- Principales aprendizajes técnicos y organizacionales.
+- Retos enfrentados durante el desarrollo y cómo los resolvieron.
+- Propuestas de mejora a futuro o nuevas funcionalidades.
