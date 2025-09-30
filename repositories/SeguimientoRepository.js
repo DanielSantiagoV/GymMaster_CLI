@@ -1,14 +1,49 @@
-const { ObjectId } = require('mongodb');
-const { Seguimiento } = require('../models');
+// ===== IMPORTS Y DEPENDENCIAS =====
+// Importación de ObjectId de MongoDB para manejo de IDs
+// PATRÓN: Dependency Injection - Se inyectan las dependencias a través del constructor
+// PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (ObjectId) no de implementaciones concretas
+const { ObjectId } = require('mongodb'); // Driver de MongoDB para operaciones con ObjectId
+// Importación del modelo Seguimiento para validaciones y transformaciones
+// PATRÓN: Dependency Injection - Se inyectan las dependencias a través del constructor
+// PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (Seguimiento) no de implementaciones concretas
+const { Seguimiento } = require('../models'); // Modelo de dominio Seguimiento
+
 
 /**
  * Repositorio para gestión de seguimientos físicos
  * Implementa el patrón Repository para abstraer el acceso a datos
  * Maneja operaciones CRUD y métodos específicos para seguimientos
+ * 
+ * PATRÓN: Repository - Abstrae el acceso a datos de seguimientos físicos
+ * PATRÓN: Data Access Object (DAO) - Proporciona interfaz para operaciones de datos
+ * PATRÓN: Facade - Proporciona una interfaz simplificada para operaciones de seguimientos
+ * PATRÓN: Data Transfer Object (DTO) - Proporciona datos estructurados
+ * PATRÓN: Module Pattern - Encapsula la funcionalidad de repositorio
+ * PRINCIPIO SOLID S: Responsabilidad Única - Se encarga únicamente de la gestión de datos de seguimientos
+ * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas operaciones sin modificar código existente
+ * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente en todas las operaciones
+ * PRINCIPIO SOLID I: Segregación de Interfaces - Métodos específicos para diferentes operaciones
+ * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (db, Seguimiento) no de implementaciones concretas
+ * 
+ * NOTA: Este módulo SÍ maneja transacciones para operaciones complejas
+ * BUENA PRÁCTICA: Repositorio centralizado para operaciones de seguimientos
  */
 class SeguimientoRepository {
+    /**
+     * Constructor del repositorio de seguimientos físicos
+     * @param {Object} db - Instancia de base de datos MongoDB
+     * 
+     * PATRÓN: Dependency Injection - Inyecta dependencia de base de datos
+     * PATRÓN: Repository - Inicializa el repositorio con la colección
+     * PRINCIPIO SOLID S: Responsabilidad de inicializar el repositorio
+     * BUENA PRÁCTICA: Inicialización de repositorio en constructor
+     */
     constructor(db) {
+        // PATRÓN: Repository - Abstrae el acceso a la colección de seguimientos
+        // PRINCIPIO SOLID S: Responsabilidad de acceder a la colección de seguimientos
         this.collection = db.collection('seguimientos');
+        // PATRÓN: Dependency Injection - Inyecta dependencia de base de datos
+        // PRINCIPIO SOLID S: Responsabilidad de mantener referencia a la base de datos
         this.db = db;
     }
 
@@ -17,15 +52,34 @@ class SeguimientoRepository {
      * @param {Seguimiento} seguimiento - Instancia de Seguimiento a crear
      * @returns {Promise<ObjectId>} ID del seguimiento creado
      * @throws {Error} Si la validación falla o hay error en la inserción
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de creación
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona resultado estructurado
+     * PATRÓN: Validation Pattern - Valida datos antes de inserción
+     * PATRÓN: Guard Clause - Validaciones tempranas para evitar errores
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de crear seguimientos
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para creación
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (Seguimiento)
+     * 
+     * NOTA: No hay transacciones ya que es una operación simple de inserción
+     * BUENA PRÁCTICA: Validación de datos antes de inserción
      */
     async create(seguimiento) {
         try {
-            // Validar que sea una instancia de Seguimiento
+            // ===== VALIDACIÓN DE INSTANCIA =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar errores
+            // PATRÓN: Validation Pattern - Valida que sea instancia de Seguimiento
+            // PRINCIPIO SOLID S: Responsabilidad de validar el tipo de dato
             if (!(seguimiento instanceof Seguimiento)) {
                 throw new Error('El parámetro debe ser una instancia de Seguimiento');
             }
 
-            // Verificar que no exista un seguimiento para el mismo cliente en la misma fecha
+            // ===== VERIFICACIÓN DE UNICIDAD POR CLIENTE Y FECHA =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar duplicados
+            // PATRÓN: Validation Pattern - Valida unicidad de seguimiento por cliente y fecha
+            // PRINCIPIO SOLID S: Responsabilidad de verificar unicidad
             const seguimientoExistente = await this.collection.findOne({
                 clienteId: seguimiento.clienteId,
                 fecha: {
@@ -34,17 +88,30 @@ class SeguimientoRepository {
                 }
             });
 
+            // ===== VALIDACIÓN DE DUPLICADO =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar duplicados
+            // PATRÓN: Validation Pattern - Valida que no exista seguimiento duplicado
+            // PRINCIPIO SOLID S: Responsabilidad de validar duplicados
             if (seguimientoExistente) {
                 throw new Error('Ya existe un seguimiento para este cliente en esta fecha');
             }
 
-            // Convertir a objeto MongoDB
+            // ===== CONVERSIÓN A OBJETO MONGODB =====
+            // PATRÓN: Data Transfer Object (DTO) - Convierte a formato MongoDB
+            // PATRÓN: Mapper - Mapea entre modelo de dominio y formato de base de datos
+            // PRINCIPIO SOLID S: Responsabilidad de convertir a formato de base de datos
             const seguimientoDoc = seguimiento.toMongoObject();
             
-            // Insertar en la base de datos
+            // ===== INSERCIÓN EN BASE DE DATOS =====
+            // PATRÓN: Repository - Abstrae la operación de inserción
+            // PATRÓN: Data Transfer Object (DTO) - Retorna resultado estructurado
+            // PRINCIPIO SOLID S: Responsabilidad de insertar en base de datos
             const result = await this.collection.insertOne(seguimientoDoc);
             return result.insertedId;
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Handling - Manejo centralizado de errores
+            // PRINCIPIO SOLID S: Responsabilidad de manejar errores
             throw new Error(`Error al crear seguimiento: ${error.message}`);
         }
     }
@@ -54,21 +121,52 @@ class SeguimientoRepository {
      * @param {string|ObjectId} id - ID del seguimiento
      * @returns {Promise<Seguimiento|null>} Seguimiento encontrado o null
      * @throws {Error} Si el ID no es válido
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de búsqueda por ID
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona resultado estructurado
+     * PATRÓN: Validation Pattern - Valida ID antes de búsqueda
+     * PATRÓN: Guard Clause - Validaciones tempranas para evitar errores
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de buscar por ID
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para búsqueda por ID
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (Seguimiento)
+     * 
+     * NOTA: No hay transacciones ya que es una operación simple de lectura
+     * BUENA PRÁCTICA: Validación de ID antes de búsqueda
      */
     async getById(id) {
         try {
+            // ===== VALIDACIÓN DE ID =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar errores
+            // PATRÓN: Validation Pattern - Valida que el ID sea válido
+            // PRINCIPIO SOLID S: Responsabilidad de validar el ID
             if (!ObjectId.isValid(id)) {
                 throw new Error('ID del seguimiento no es válido');
             }
 
+            // ===== BÚSQUEDA EN BASE DE DATOS =====
+            // PATRÓN: Repository - Abstrae la operación de búsqueda
+            // PATRÓN: Data Transfer Object (DTO) - Retorna resultado estructurado
+            // PRINCIPIO SOLID S: Responsabilidad de buscar en base de datos
             const seguimientoDoc = await this.collection.findOne({ _id: new ObjectId(id) });
             
+            // ===== VERIFICACIÓN DE EXISTENCIA =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar errores
+            // PRINCIPIO SOLID S: Responsabilidad de verificar existencia
             if (!seguimientoDoc) {
                 return null;
             }
 
+            // ===== CONVERSIÓN A MODELO DE DOMINIO =====
+            // PATRÓN: Mapper - Mapea entre formato de base de datos y modelo de dominio
+            // PATRÓN: Data Transfer Object (DTO) - Convierte a modelo de dominio
+            // PRINCIPIO SOLID S: Responsabilidad de convertir a modelo de dominio
             return Seguimiento.fromMongoObject(seguimientoDoc);
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Handling - Manejo centralizado de errores
+            // PRINCIPIO SOLID S: Responsabilidad de manejar errores
             throw new Error(`Error al obtener seguimiento: ${error.message}`);
         }
     }
@@ -78,17 +176,44 @@ class SeguimientoRepository {
      * @param {Object} filter - Filtro de búsqueda
      * @param {Object} options - Opciones de consulta (limit, skip, sort)
      * @returns {Promise<Seguimiento[]>} Array de seguimientos
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de obtención de todos los seguimientos
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona resultado estructurado
+     * PATRÓN: Query Object - Proporciona filtros y opciones de búsqueda
+     * PATRÓN: Builder - Construye consulta paso a paso
+     * PATRÓN: Mapper - Mapea entre formato de base de datos y modelo de dominio
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de obtener todos los seguimientos
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas opciones
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para obtener todos
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (Seguimiento)
+     * 
+     * NOTA: No hay transacciones ya que es una operación simple de lectura
+     * BUENA PRÁCTICA: Consulta eficiente con filtros y opciones
      */
     async getAll(filter = {}, options = {}) {
         try {
+            // ===== DESESTRUCTURACIÓN DE OPCIONES =====
+            // PATRÓN: Strategy - Estrategia de opciones de consulta
+            // PRINCIPIO SOLID S: Responsabilidad de configurar opciones
             const { limit = 0, skip = 0, sort = { fecha: -1 } } = options;
             
+            // ===== CONSTRUCCIÓN DE CONSULTA =====
+            // PATRÓN: Builder - Construye consulta paso a paso
+            // PATRÓN: Query Object - Proporciona filtros de búsqueda
+            // PRINCIPIO SOLID S: Responsabilidad de construir consulta
             let query = this.collection.find(filter);
             
+            // ===== APLICACIÓN DE ORDENAMIENTO =====
+            // PATRÓN: Strategy - Estrategia de ordenamiento
+            // PRINCIPIO SOLID S: Responsabilidad de aplicar ordenamiento
             if (sort) {
                 query = query.sort(sort);
             }
             
+            // ===== APLICACIÓN DE PAGINACIÓN =====
+            // PATRÓN: Strategy - Estrategia de paginación
+            // PRINCIPIO SOLID S: Responsabilidad de aplicar paginación
             if (skip > 0) {
                 query = query.skip(skip);
             }
@@ -97,9 +222,20 @@ class SeguimientoRepository {
                 query = query.limit(limit);
             }
 
+            // ===== EJECUCIÓN DE CONSULTA =====
+            // PATRÓN: Repository - Abstrae la operación de búsqueda
+            // PRINCIPIO SOLID S: Responsabilidad de ejecutar consulta
             const seguimientosDocs = await query.toArray();
+            
+            // ===== CONVERSIÓN A MODELOS DE DOMINIO =====
+            // PATRÓN: Mapper - Mapea entre formato de base de datos y modelo de dominio
+            // PATRÓN: Data Transfer Object (DTO) - Convierte a modelos de dominio
+            // PRINCIPIO SOLID S: Responsabilidad de convertir a modelos de dominio
             return seguimientosDocs.map(doc => Seguimiento.fromMongoObject(doc));
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Handling - Manejo centralizado de errores
+            // PRINCIPIO SOLID S: Responsabilidad de manejar errores
             throw new Error(`Error al obtener seguimientos: ${error.message}`);
         }
     }
@@ -198,14 +334,34 @@ class SeguimientoRepository {
      * @param {string} motivo - Motivo de la eliminación
      * @returns {Promise<Object>} Resultado de la operación
      * @throws {Error} Si hay error en el rollback
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de eliminación masiva
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona resultado estructurado
+     * PATRÓN: Transaction Pattern - Maneja transacciones con rollback automático
+     * PATRÓN: Guard Clause - Validaciones tempranas para evitar errores
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de eliminar seguimientos por cliente
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para eliminación masiva
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (collection)
+     * 
+     * NOTA: SÍ maneja transacciones para operaciones complejas
+     * BUENA PRÁCTICA: Transacciones con rollback automático
      */
     async deleteFollowUpsByClientWithRollback(clienteId, motivo = 'Cancelación de plan/contrato') {
         try {
+            // ===== VALIDACIÓN DE ID =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar errores
+            // PATRÓN: Validation Pattern - Valida que el ID sea válido
+            // PRINCIPIO SOLID S: Responsabilidad de validar el ID
             if (!ObjectId.isValid(clienteId)) {
                 throw new Error('ID del cliente no es válido');
             }
 
-            // Obtener seguimientos del cliente antes de eliminarlos
+            // ===== VERIFICACIÓN DE SEGUIMIENTOS EXISTENTES =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar operaciones innecesarias
+            // PATRÓN: Validation Pattern - Valida que existan seguimientos para eliminar
+            // PRINCIPIO SOLID S: Responsabilidad de verificar existencia
             const seguimientos = await this.getByClient(clienteId);
             if (seguimientos.length === 0) {
                 return {
@@ -215,26 +371,43 @@ class SeguimientoRepository {
                 };
             }
 
-            // Iniciar transacción para rollback
+            // ===== INICIO DE TRANSACCIÓN =====
+            // PATRÓN: Transaction Pattern - Inicia sesión transaccional
+            // PRINCIPIO SOLID S: Responsabilidad de manejar transacciones
             const session = this.db.client.startSession();
             
             try {
                 let resultado;
                 
+                // ===== EJECUCIÓN DE TRANSACCIÓN =====
+                // PATRÓN: Transaction Pattern - Ejecuta operaciones dentro de transacción
+                // PRINCIPIO SOLID S: Responsabilidad de ejecutar operaciones transaccionales
                 await session.withTransaction(async () => {
-                    // Eliminar todos los seguimientos del cliente
+                    // ===== ELIMINACIÓN MASIVA =====
+                    // PATRÓN: Repository - Abstrae la operación de eliminación masiva
+                    // PATRÓN: Data Transfer Object (DTO) - Retorna resultado estructurado
+                    // PRINCIPIO SOLID S: Responsabilidad de eliminar seguimientos
                     const deleteResult = await this.collection.deleteMany(
                         { clienteId: new ObjectId(clienteId) },
-                        { session }
+                        { session }  // ← Usa la sesión transaccional
                     );
 
+                    // ===== VALIDACIÓN DE RESULTADO =====
+                    // PATRÓN: Guard Clause - Validación temprana para evitar errores
+                    // PATRÓN: Validation Pattern - Valida que la eliminación fue exitosa
+                    // PRINCIPIO SOLID S: Responsabilidad de validar resultado
                     if (deleteResult.deletedCount === 0) {
                         throw new Error('No se pudieron eliminar los seguimientos');
                     }
 
-                    // Registrar la eliminación masiva para auditoría
+                    // ===== REGISTRO DE AUDITORÍA =====
+                    // PATRÓN: Observer - Registra eventos para auditoría
+                    // PRINCIPIO SOLID S: Responsabilidad de registrar operaciones
                     console.log(`🗑️ Eliminados ${deleteResult.deletedCount} seguimientos del cliente ${clienteId} - Motivo: ${motivo}`);
 
+                    // ===== CONSTRUCCIÓN DE RESULTADO =====
+                    // PATRÓN: Data Transfer Object (DTO) - Proporciona resultado estructurado
+                    // PRINCIPIO SOLID S: Responsabilidad de construir resultado
                     resultado = {
                         success: true,
                         eliminados: deleteResult.deletedCount,
@@ -242,11 +415,22 @@ class SeguimientoRepository {
                     };
                 });
 
+                // ===== COMMIT AUTOMÁTICO =====
+                // PATRÓN: Transaction Pattern - Commit automático si no hay errores
+                // PRINCIPIO SOLID S: Responsabilidad de confirmar transacción
                 return resultado;
             } finally {
+                // ===== CIERRE DE SESIÓN =====
+                // PATRÓN: Transaction Pattern - Cierra sesión transaccional
+                // PATRÓN: Resource Management - Manejo de recursos
+                // PRINCIPIO SOLID S: Responsabilidad de liberar recursos
                 await session.endSession();
             }
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Handling - Manejo centralizado de errores
+            // PATRÓN: Transaction Pattern - Rollback automático si hay errores
+            // PRINCIPIO SOLID S: Responsabilidad de manejar errores
             throw new Error(`Error al eliminar seguimientos del cliente: ${error.message}`);
         }
     }
@@ -485,25 +669,71 @@ class SeguimientoRepository {
      * Obtiene estadísticas de seguimientos por cliente
      * @param {string|ObjectId} clienteId - ID del cliente
      * @returns {Promise<Object>} Estadísticas del cliente
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de obtención de estadísticas
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona resultado estructurado
+     * PATRÓN: Aggregator - Agrega datos de múltiples fuentes
+     * PATRÓN: Query Object - Proporciona pipeline de agregación
+     * PATRÓN: Facade - Simplifica operaciones complejas de agregación
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de obtener estadísticas
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas estadísticas
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para estadísticas
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (collection)
+     * 
+     * NOTA: No hay transacciones ya que es una operación simple de lectura
+     * BUENA PRÁCTICA: Agregación eficiente de estadísticas
      */
     async getClientFollowUpStats(clienteId) {
         try {
+            // ===== VALIDACIÓN DE ID =====
+            // PATRÓN: Guard Clause - Validación temprana para evitar errores
+            // PATRÓN: Validation Pattern - Valida que el ID sea válido
+            // PRINCIPIO SOLID S: Responsabilidad de validar el ID
             if (!ObjectId.isValid(clienteId)) {
                 throw new Error('ID del cliente no es válido');
             }
 
+            // ===== CONSTRUCCIÓN DE PIPELINE DE AGREGACIÓN =====
+            // PATRÓN: Aggregator - Agrega datos de múltiples fuentes
+            // PATRÓN: Query Object - Proporciona pipeline de agregación
+            // PRINCIPIO SOLID S: Responsabilidad de construir pipeline
             const pipeline = [
+                // ===== FILTRO POR CLIENTE =====
+                // PATRÓN: Query Object - Filtra documentos por cliente
+                // PRINCIPIO SOLID S: Responsabilidad de filtrar por cliente
                 { $match: { clienteId: new ObjectId(clienteId) } },
+                
+                // ===== AGRUPACIÓN Y CÁLCULOS =====
+                // PATRÓN: Aggregator - Agrupa y calcula estadísticas
+                // PATRÓN: Facade - Simplifica cálculos complejos
+                // PRINCIPIO SOLID S: Responsabilidad de calcular estadísticas
                 {
                     $group: {
                         _id: null,
+                        // ===== CONTEO TOTAL =====
+                        // PATRÓN: Aggregator - Cuenta total de seguimientos
+                        // PRINCIPIO SOLID S: Responsabilidad de contar seguimientos
                         totalSeguimientos: { $sum: 1 },
+                        
+                        // ===== ESTADÍSTICAS DE PESO =====
+                        // PATRÓN: Aggregator - Calcula estadísticas de peso
+                        // PRINCIPIO SOLID S: Responsabilidad de calcular estadísticas de peso
                         pesoPromedio: { $avg: "$peso" },
                         pesoMinimo: { $min: "$peso" },
                         pesoMaximo: { $max: "$peso" },
+                        
+                        // ===== ESTADÍSTICAS DE GRASA CORPORAL =====
+                        // PATRÓN: Aggregator - Calcula estadísticas de grasa corporal
+                        // PRINCIPIO SOLID S: Responsabilidad de calcular estadísticas de grasa
                         grasaPromedio: { $avg: "$grasaCorporal" },
                         grasaMinima: { $min: "$grasaCorporal" },
                         grasaMaxima: { $max: "$grasaCorporal" },
+                        
+                        // ===== CONTEO DE SEGUIMIENTOS CON MEDIDAS =====
+                        // PATRÓN: Aggregator - Cuenta seguimientos con medidas
+                        // PATRÓN: Conditional Logic - Lógica condicional para conteo
+                        // PRINCIPIO SOLID S: Responsabilidad de contar seguimientos con medidas
                         conMedidas: {
                             $sum: {
                                 $cond: [
@@ -513,6 +743,11 @@ class SeguimientoRepository {
                                 ]
                             }
                         },
+                        
+                        // ===== CONTEO DE SEGUIMIENTOS CON FOTOS =====
+                        // PATRÓN: Aggregator - Cuenta seguimientos con fotos
+                        // PATRÓN: Conditional Logic - Lógica condicional para conteo
+                        // PRINCIPIO SOLID S: Responsabilidad de contar seguimientos con fotos
                         conFotos: {
                             $sum: {
                                 $cond: [
@@ -526,7 +761,15 @@ class SeguimientoRepository {
                 }
             ];
 
+            // ===== EJECUCIÓN DE PIPELINE =====
+            // PATRÓN: Repository - Abstrae la operación de agregación
+            // PRINCIPIO SOLID S: Responsabilidad de ejecutar pipeline
             const stats = await this.collection.aggregate(pipeline).toArray();
+            
+            // ===== CONSTRUCCIÓN DE RESULTADO =====
+            // PATRÓN: Data Transfer Object (DTO) - Proporciona estadísticas estructuradas
+            // PATRÓN: Aggregator - Agrega datos de múltiples fuentes
+            // PRINCIPIO SOLID S: Responsabilidad de construir estadísticas
             return stats.length > 0 ? stats[0] : {
                 totalSeguimientos: 0,
                 pesoPromedio: null,
@@ -539,6 +782,9 @@ class SeguimientoRepository {
                 conFotos: 0
             };
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Handling - Manejo centralizado de errores
+            // PRINCIPIO SOLID S: Responsabilidad de manejar errores
             throw new Error(`Error al obtener estadísticas del cliente: ${error.message}`);
         }
     }
