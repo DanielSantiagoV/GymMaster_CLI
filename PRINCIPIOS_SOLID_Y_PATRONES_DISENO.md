@@ -2,11 +2,12 @@
 
 ## 📋 ÍNDICE
 1. [Introducción](#introducción)
-2. [Principios SOLID Aplicados](#principios-solid-aplicados)
-3. [Patrones de Diseño Implementados](#patrones-de-diseño-implementados)
-4. [Arquitectura del Sistema](#arquitectura-del-sistema)
-5. [Ejemplos de Código](#ejemplos-de-código)
-6. [Beneficios y Conclusiones](#beneficios-y-conclusiones)
+2. [Principios SOLID - Explicación Detallada](#principios-solid---explicación-detallada)
+3. [Patrones de Diseño - Explicación Completa](#patrones-de-diseño---explicación-completa)
+4. [Análisis por Archivos del Proyecto](#análisis-por-archivos-del-proyecto)
+5. [Arquitectura del Sistema](#arquitectura-del-sistema)
+6. [Ejemplos de Código Específicos](#ejemplos-de-código-específicos)
+7. [Beneficios y Conclusiones](#beneficios-y-conclusiones)
 
 ---
 
@@ -22,16 +23,36 @@ Este documento presenta un análisis completo de los **Principios SOLID** y **Pa
 
 ---
 
-## 🔧 PRINCIPIOS SOLID APLICADOS
+## 🔧 PRINCIPIOS SOLID - EXPLICACIÓN DETALLADA
 
 ### 1. **S - SINGLE RESPONSIBILITY PRINCIPLE (SRP)**
 > *"Una clase debe tener solo una razón para cambiar"*
 
-#### ✅ **Ejemplos Aplicados:**
+#### 📚 **¿Qué significa SRP?**
+El Principio de Responsabilidad Única establece que cada clase debe tener **una sola razón para cambiar**. Esto significa que:
 
-**📁 Archivo: `services/ClienteService.js`**
+- **Una clase = Una responsabilidad**
+- **Un cambio = Una clase afectada**
+- **Separación clara de responsabilidades**
+- **Código más mantenible y testeable**
+
+#### 🎯 **Beneficios del SRP:**
+- **Mantenibilidad**: Fácil localizar y corregir errores
+- **Testabilidad**: Tests más simples y específicos
+- **Reutilización**: Componentes más pequeños y enfocados
+- **Extensibilidad**: Fácil agregar nuevas funcionalidades
+
+#### ✅ **Ejemplos Aplicados en el Proyecto:**
+
+**📁 Archivo: `services/ClienteService.js` (Líneas 22-55)**
 ```javascript
-// Líneas 22-55: Método crearCliente()
+/**
+ * Crea un nuevo cliente con validaciones de negocio
+ * SRP: Responsabilidad única de crear clientes
+ * - Solo se encarga de la lógica de creación de clientes
+ * - No maneja persistencia (delegado a ClienteRepository)
+ * - No maneja presentación (delegado a CLI)
+ */
 async crearCliente(dataCliente) {
     try {
         // SRP: Responsabilidad única de crear clientes
@@ -58,6 +79,12 @@ async crearCliente(dataCliente) {
     }
 }
 ```
+
+**🔍 Análisis SRP en ClienteService:**
+- ✅ **Responsabilidad única**: Solo maneja lógica de negocio de clientes
+- ✅ **Separación clara**: No maneja persistencia ni presentación
+- ✅ **Una razón para cambiar**: Solo cambia si cambia la lógica de creación de clientes
+- ✅ **Delegación correcta**: Usa repositorios para persistencia
 
 **📁 Archivo: `services/BusquedaService.js`**
 ```javascript
@@ -310,29 +337,84 @@ class ConnectionManager {
 
 ---
 
-## 🎨 PATRONES DE DISEÑO IMPLEMENTADOS
+## 🎨 PATRONES DE DISEÑO - EXPLICACIÓN COMPLETA
 
 ### 1. **REPOSITORY PATTERN**
 > *Abstrae el acceso a datos y centraliza la lógica de persistencia*
 
-#### ✅ **Implementación:**
+#### 📚 **¿Qué es el Repository Pattern?**
+El patrón Repository es un patrón de diseño que **abstrae el acceso a datos** y proporciona una interfaz uniforme para acceder a diferentes fuentes de datos. Actúa como una **capa de abstracción** entre la lógica de negocio y la capa de persistencia.
 
-**📁 Archivo: `repositories/ClienteRepository.js`**
+#### 🎯 **Beneficios del Repository Pattern:**
+- **Abstracción**: Oculta la complejidad del acceso a datos
+- **Testabilidad**: Fácil crear mocks para testing
+- **Flexibilidad**: Cambiar fuentes de datos sin afectar lógica de negocio
+- **Reutilización**: Lógica de acceso a datos centralizada
+- **Mantenibilidad**: Cambios en persistencia aislados
+
+#### 🔧 **Componentes del Repository Pattern:**
+1. **Repository Interface**: Define los métodos de acceso a datos
+2. **Repository Implementation**: Implementación específica (MongoDB, MySQL, etc.)
+3. **Domain Model**: Entidades de negocio
+4. **Service Layer**: Usa el repositorio para lógica de negocio
+
+#### ✅ **Implementación en el Proyecto:**
+
+**📁 Archivo: `repositories/ClienteRepository.js` (Líneas 9-43)**
 ```javascript
-// Líneas 9-13: Definición de la clase
+/**
+ * Repositorio para gestión de clientes
+ * Repository Pattern: Abstrae el acceso a datos MongoDB
+ * - Encapsula operaciones CRUD específicas para clientes
+ * - Oculta la complejidad de MongoDB
+ * - Proporciona interfaz uniforme para acceso a datos
+ */
 class ClienteRepository {
     constructor(db) {
         this.collection = db.collection('clientes');
         this.db = db;
     }
     
+    /**
+     * Crea un nuevo cliente en la base de datos
+     * Repository Pattern: Abstrae la operación de inserción
+     */
+    async create(cliente) {
+        try {
+            // Validar que sea una instancia de Cliente
+            if (!(cliente instanceof Cliente)) {
+                throw new Error('El parámetro debe ser una instancia de Cliente');
+            }
+
+            // Convertir a objeto MongoDB
+            const clienteDoc = cliente.toMongoObject();
+            
+            // Verificar que no exista un cliente con el mismo email
+            const clienteExistente = await this.collection.findOne({ email: clienteDoc.email });
+            if (clienteExistente) {
+                throw new Error('Ya existe un cliente con este email');
+            }
+
+            // Insertar en la base de datos
+            const result = await this.collection.insertOne(clienteDoc);
+            return result.insertedId;
+        } catch (error) {
+            throw new Error(`Error al crear cliente: ${error.message}`);
+        }
+    }
+    
     // Métodos CRUD encapsulados
-    async create(cliente) { /* ... */ }
     async getById(id) { /* ... */ }
     async update(id, updatedData) { /* ... */ }
     async delete(id) { /* ... */ }
 }
 ```
+
+**🔍 Análisis Repository Pattern:**
+- ✅ **Abstracción**: Oculta detalles de MongoDB
+- ✅ **Encapsulación**: Operaciones CRUD centralizadas
+- ✅ **Reutilización**: Lógica de acceso a datos reutilizable
+- ✅ **Testabilidad**: Fácil crear mocks para testing
 
 **📁 Archivo: `repositories/index.js`**
 ```javascript
@@ -361,7 +443,23 @@ module.exports = {
 ### 2. **SERVICE LAYER PATTERN**
 > *Encapsula la lógica de negocio y actúa como intermediario*
 
-#### ✅ **Implementación:**
+#### 📚 **¿Qué es el Service Layer Pattern?**
+El patrón Service Layer es un patrón arquitectónico que **encapsula la lógica de negocio** en una capa separada. Actúa como **intermediario** entre la capa de presentación (CLI) y la capa de datos (Repository), proporcionando una interfaz limpia para operaciones de negocio.
+
+#### 🎯 **Beneficios del Service Layer Pattern:**
+- **Separación de responsabilidades**: Lógica de negocio separada de presentación y datos
+- **Reutilización**: Servicios pueden ser usados por diferentes interfaces
+- **Testabilidad**: Fácil testing de lógica de negocio
+- **Mantenibilidad**: Cambios en lógica de negocio centralizados
+- **Flexibilidad**: Fácil agregar nuevas funcionalidades
+
+#### 🔧 **Componentes del Service Layer Pattern:**
+1. **Service Classes**: Contienen la lógica de negocio
+2. **Repository Dependencies**: Acceso a datos a través de repositorios
+3. **Business Logic**: Reglas de negocio encapsuladas
+4. **Data Transformation**: Conversión entre capas
+
+#### ✅ **Implementación en el Proyecto:**
 
 **📁 Archivo: `services/ClienteService.js`**
 ```javascript
@@ -668,6 +766,373 @@ module.exports = {
     FinanzasService,
     ReportesService
 };
+```
+
+---
+
+## 📁 ANÁLISIS POR ARCHIVOS DEL PROYECTO
+
+### 🎯 **Archivo: `index.js` - Punto de Entrada Principal**
+
+#### **Patrones de Diseño Aplicados:**
+- **Singleton Pattern**: Una sola instancia de la aplicación
+- **Facade Pattern**: Interfaz simplificada para el sistema completo
+- **Template Method Pattern**: Flujo estándar de inicialización
+- **Observer Pattern**: Manejo de señales del sistema
+- **Strategy Pattern**: Diferentes tipos de banner y animaciones
+- **Builder Pattern**: Construcción del menú principal
+- **Module Pattern**: Exportación y encapsulación
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Cada método tiene una responsabilidad específica
+- **OCP**: Extensible sin modificar código existente
+- **LSP**: Subclases pueden sustituir la clase base
+- **ISP**: Interfaces específicas para cada funcionalidad
+- **DIP**: Depende de abstracciones, no implementaciones concretas
+
+#### **Código Específico:**
+```javascript
+// Líneas 1-112: Implementación de patrones
+class GymMasterApp {
+    constructor() {
+        // Singleton: Instancia única
+        this.connectionManager = connectionManager;
+        this.config = config;
+    }
+    
+    async run() {
+        // Template Method: Flujo estándar
+        await this.initialize();
+        await this.showBanner();
+        await this.showMainMenu();
+    }
+    
+    async initialize() {
+        // SRP: Solo inicialización
+        await this.validateEnvironment();
+        await this.connectionManager.initialize();
+    }
+}
+```
+
+### 🎯 **Archivo: `services/ClienteService.js` - Servicio de Clientes**
+
+#### **Patrones de Diseño Aplicados:**
+- **Service Layer Pattern**: Encapsula lógica de negocio
+- **Dependency Injection Pattern**: Inyección de repositorios
+- **Factory Pattern**: Creación de instancias de Cliente
+- **Template Method Pattern**: Flujo estándar de operaciones CRUD
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Solo maneja lógica de negocio de clientes
+- **OCP**: Extensible para nuevas funcionalidades
+- **LSP**: Repositorios son sustituibles
+- **ISP**: Interfaces específicas para cada operación
+- **DIP**: Depende de abstracciones (repositorios)
+
+#### **Código Específico:**
+```javascript
+// Líneas 10-55: Implementación de Service Layer
+class ClienteService {
+    constructor(db) {
+        // DI: Inyección de dependencias
+        this.clienteRepository = new ClienteRepository(db);
+        this.db = db;
+    }
+    
+    async crearCliente(dataCliente) {
+        // SRP: Solo creación de clientes
+        await this.validarDatosCliente(dataCliente);
+        const cliente = new Cliente(dataCliente); // Factory
+        const clienteId = await this.clienteRepository.create(cliente);
+        return { success: true, data: clienteCreado.getResumen() };
+    }
+}
+```
+
+### 🎯 **Archivo: `repositories/ClienteRepository.js` - Repositorio de Clientes**
+
+#### **Patrones de Diseño Aplicados:**
+- **Repository Pattern**: Abstrae acceso a datos
+- **Data Mapper Pattern**: Conversión entre objetos de dominio y BD
+- **Unit of Work Pattern**: Operaciones atómicas
+- **Identity Map Pattern**: Cache de objetos cargados
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Solo maneja persistencia de clientes
+- **OCP**: Extensible para nuevos tipos de consultas
+- **LSP**: Implementaciones son sustituibles
+- **ISP**: Métodos específicos para cada operación
+- **DIP**: Depende de abstracción de MongoDB
+
+#### **Código Específico:**
+```javascript
+// Líneas 9-67: Implementación de Repository Pattern
+class ClienteRepository {
+    constructor(db) {
+        this.collection = db.collection('clientes');
+        this.db = db;
+    }
+    
+    async create(cliente) {
+        // Repository: Abstrae inserción
+        const clienteDoc = cliente.toMongoObject(); // Data Mapper
+        const result = await this.collection.insertOne(clienteDoc);
+        return result.insertedId;
+    }
+    
+    async getById(id) {
+        // Repository: Abstrae consulta
+        const clienteDoc = await this.collection.findOne({ _id: new ObjectId(id) });
+        return Cliente.fromMongoObject(clienteDoc); // Data Mapper
+    }
+}
+```
+
+### 🎯 **Archivo: `models/Cliente.js` - Modelo de Cliente**
+
+#### **Patrones de Diseño Aplicados:**
+- **Domain Model Pattern**: Representa entidad de negocio
+- **Value Object Pattern**: Objetos inmutables
+- **Factory Method Pattern**: Creación de instancias
+- **Builder Pattern**: Construcción de objetos complejos
+- **Template Method Pattern**: Flujo de validación
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Solo representa entidad Cliente
+- **OCP**: Extensible para nuevas validaciones
+- **LSP**: Subclases pueden sustituir la clase base
+- **ISP**: Métodos específicos para cada funcionalidad
+- **DIP**: Depende de abstracciones (dayjs, ObjectId)
+
+#### **Código Específico:**
+```javascript
+// Líneas 8-100: Implementación de Domain Model
+class Cliente {
+    constructor({ clienteId, nombre, apellido, email, telefono, fechaRegistro, activo, planes }) {
+        // Builder: Construcción paso a paso
+        this.clienteId = clienteId || new ObjectId();
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.email = email;
+        this.telefono = telefono;
+        this.fechaRegistro = fechaRegistro || new Date();
+        this.activo = activo;
+        this.planes = planes;
+        
+        this.validate(); // Template Method
+    }
+    
+    validate() {
+        // Template Method: Flujo de validación
+        this.validateNombre();
+        this.validateApellido();
+        this.validateEmail();
+        this.validateTelefono();
+    }
+    
+    static fromMongoObject(mongoDoc) {
+        // Factory Method: Creación desde BD
+        return new Cliente({
+            clienteId: mongoDoc._id,
+            nombre: mongoDoc.nombre,
+            apellido: mongoDoc.apellido,
+            email: mongoDoc.email,
+            telefono: mongoDoc.telefono,
+            fechaRegistro: mongoDoc.fechaRegistro,
+            activo: mongoDoc.activo,
+            planes: mongoDoc.planes || []
+        });
+    }
+}
+```
+
+### 🎯 **Archivo: `config/connection.js` - Gestor de Conexión**
+
+#### **Patrones de Diseño Aplicados:**
+- **Singleton Pattern**: Una sola instancia de conexión
+- **Factory Pattern**: Creación de índices
+- **Template Method Pattern**: Flujo de inicialización
+- **Observer Pattern**: Monitoreo de estado de conexión
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Solo maneja conexión a MongoDB
+- **OCP**: Extensible para nuevos tipos de índices
+- **LSP**: Implementaciones son sustituibles
+- **ISP**: Métodos específicos para cada operación
+- **DIP**: Depende de abstracción DatabaseConfig
+
+#### **Código Específico:**
+```javascript
+// Líneas 8-107: Implementación de Singleton
+class ConnectionManager {
+    constructor() {
+        // Singleton: Instancia única
+        this.dbConfig = new DatabaseConfig();
+        this.isConnected = false;
+    }
+    
+    async initialize() {
+        // Template Method: Flujo de inicialización
+        if (this.isConnected) {
+            return { client: this.dbConfig.client, db: this.dbConfig.db };
+        }
+        
+        const connection = await this.dbConfig.connect();
+        this.isConnected = true;
+        await this.createIndexes(connection.db);
+        return connection;
+    }
+    
+    async createIndexes(db) {
+        // Factory: Creación de índices
+        await db.collection('clientes').createIndex({ email: 1 }, { unique: true });
+        await db.collection('clientes').createIndex({ telefono: 1 });
+        // ... más índices
+    }
+}
+
+// Singleton: Exportar instancia única
+module.exports = new ConnectionManager();
+```
+
+### 🎯 **Archivo: `services/BusquedaService.js` - Servicio de Búsqueda**
+
+#### **Patrones de Diseño Aplicados:**
+- **Service Layer Pattern**: Encapsula lógica de búsqueda
+- **Strategy Pattern**: Diferentes estrategias de búsqueda
+- **Facade Pattern**: Interfaz simplificada para búsquedas
+- **Template Method Pattern**: Flujo estándar de búsqueda
+- **Dependency Injection Pattern**: Inyección de repositorios
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Solo maneja lógica de búsqueda
+- **OCP**: Extensible para nuevos tipos de búsqueda
+- **LSP**: Repositorios son sustituibles
+- **ISP**: Métodos específicos para cada tipo de búsqueda
+- **DIP**: Depende de abstracciones (repositorios)
+
+#### **Código Específico:**
+```javascript
+// Líneas 140-265: Implementación de Strategy Pattern
+class BusquedaService {
+    constructor(db) {
+        // DI: Inyección de dependencias
+        this.clienteRepository = new ClienteRepository(db);
+        this.contratoRepository = new ContratoRepository(db);
+    }
+    
+    async buscarClientes(termino) {
+        // Strategy: Diferentes estrategias de búsqueda
+        const terminoLimpio = termino.trim().toLowerCase();
+        
+        // Strategy 1: Búsqueda por ID
+        if (terminoLimpio.match(/^[0-9a-fA-F]{24}$/)) {
+            const cliente = await this.clienteRepository.getById(terminoLimpio);
+            if (cliente) return [cliente];
+        }
+        
+        // Strategy 2: Búsqueda por nombre
+        const clientes = await this.clienteRepository.searchClients(terminoLimpio);
+        return clientes;
+    }
+    
+    getResumenCliente(cliente) {
+        // Strategy: Diferentes estrategias para construir nombre
+        let nombreCompleto = 'Nombre no disponible';
+        
+        if (cliente.nombreCompleto) {
+            nombreCompleto = cliente.nombreCompleto;
+        } else if (cliente.nombre && cliente.apellido) {
+            nombreCompleto = `${cliente.nombre} ${cliente.apellido}`;
+        } else if (cliente.nombre) {
+            nombreCompleto = cliente.nombre;
+        } else if (cliente.email) {
+            nombreCompleto = cliente.email.split('@')[0];
+        }
+        
+        return { id: cliente.clienteId.toString(), nombre: nombreCompleto };
+    }
+}
+```
+
+### 🎯 **Archivo: `services/ClienteIntegradoService.js` - Servicio Integrado**
+
+#### **Patrones de Diseño Aplicados:**
+- **Facade Pattern**: Interfaz simplificada para operaciones complejas
+- **Service Layer Pattern**: Encapsula lógica de integración
+- **Data Transfer Object (DTO) Pattern**: Objetos para transferencia de datos
+- **Mapper Pattern**: Transformación de entidades a DTOs
+- **Aggregator Pattern**: Agrega información de múltiples fuentes
+- **Circuit Breaker Pattern**: Maneja errores individuales
+- **Fallback Pattern**: Proporciona datos básicos como alternativa
+
+#### **Principios SOLID Aplicados:**
+- **SRP**: Solo maneja integración de datos del cliente
+- **OCP**: Extensible para nuevas fuentes de datos
+- **LSP**: Repositorios son sustituibles
+- **ISP**: Métodos específicos para cada tipo de integración
+- **DIP**: Depende de abstracciones (repositorios)
+
+#### **Código Específico:**
+```javascript
+// Líneas 19-92: Implementación de Facade Pattern
+class ClienteIntegradoService {
+    constructor(db) {
+        // Facade: Oculta complejidad de múltiples repositorios
+        this.clienteRepository = new ClienteRepository(db);
+        this.planEntrenamientoRepository = new PlanEntrenamientoRepository(db);
+        this.contratoRepository = new ContratoRepository(db);
+        this.seguimientoRepository = new SeguimientoRepository(db);
+        this.nutricionRepository = new NutricionRepository(db);
+    }
+    
+    async obtenerClienteCompleto(clienteId) {
+        // Facade: Un solo método que coordina múltiples operaciones
+        const cliente = await this.clienteRepository.getById(clienteId);
+        const contratos = await this.contratoRepository.getByClient(clienteId);
+        const planesAsignados = await this.obtenerPlanesAsignados(contratos);
+        const seguimientos = await this.seguimientoRepository.getByClient(clienteId);
+        const planesNutricionales = await this.nutricionRepository.getByClient(clienteId);
+        
+        // DTO: Objeto estructurado para transferencia
+        return {
+            cliente: cliente.getResumen(),
+            contratos: contratos.map(contrato => ({
+                contratoId: contrato.contratoId.toString(),
+                planId: contrato.planId.toString(),
+                fechaInicio: contrato.fechaInicio,
+                fechaFin: contrato.fechaFin,
+                precio: contrato.precio,
+                estado: contrato.estado,
+                duracionMeses: contrato.duracionMeses
+            })),
+            planesAsignados: planesAsignados,
+            seguimientos: seguimientos.map(seguimiento => ({
+                seguimientoId: seguimiento.seguimientoId.toString(),
+                fecha: seguimiento.fecha,
+                peso: seguimiento.peso,
+                grasaCorporal: seguimiento.grasaCorporal,
+                medidas: seguimiento.medidas,
+                comentarios: seguimiento.comentarios
+            })),
+            planesNutricionales: planesNutricionales.map(plan => ({
+                nutricionId: plan.nutricionId.toString(),
+                tipoPlan: plan.getTipoPlanDescripcion(),
+                estado: plan.estado,
+                fechaCreacion: plan.fechaCreacion,
+                detallePlan: plan.detallePlan.substring(0, 100) + (plan.detallePlan.length > 100 ? '...' : '')
+            })),
+            estadisticas: {
+                totalContratos: contratos.length,
+                contratosActivos: contratos.filter(c => c.estado === 'vigente').length,
+                totalSeguimientos: seguimientos.length,
+                totalPlanesNutricionales: planesNutricionales.length,
+                planesNutricionalesActivos: planesNutricionales.filter(p => p.estado === 'activo').length
+            }
+        };
+    }
+}
 ```
 
 ---
