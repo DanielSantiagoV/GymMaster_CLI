@@ -1,21 +1,47 @@
-const { ObjectId } = require('mongodb');
-const { Pago } = require('../models');
-const PagoRepository = require('../repositories/PagoRepository');
-const FinanzasRepository = require('../repositories/FinanzasRepository');
-const ClienteRepository = require('../repositories/ClienteRepository');
-const ContratoRepository = require('../repositories/ContratoRepository');
+// ===== IMPORTS Y DEPENDENCIAS =====
+// Importación de utilidades y modelos de dominio
+// PATRÓN: Dependency Injection - Se inyectan las dependencias a través del constructor
+// PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
+const { ObjectId } = require('mongodb'); // Utilidad para manejo de IDs de MongoDB
+const { Pago } = require('../models'); // Modelo de dominio para entidad Pago
+const PagoRepository = require('../repositories/PagoRepository'); // Repositorio para operaciones CRUD de pagos
+const FinanzasRepository = require('../repositories/FinanzasRepository'); // Repositorio para operaciones financieras
+const ClienteRepository = require('../repositories/ClienteRepository'); // Repositorio para operaciones de clientes
+const ContratoRepository = require('../repositories/ContratoRepository'); // Repositorio para operaciones de contratos
 
 /**
  * Servicio de gestión financiera
  * Implementa la lógica de negocio para pagos y movimientos financieros
  * Aplica principios SOLID y maneja transacciones
+ * 
+ * PATRÓN: Service Layer - Capa de servicio que orquesta la lógica de negocio financiera
+ * PATRÓN: Facade - Proporciona una interfaz simplificada para operaciones complejas de finanzas
+ * PRINCIPIO SOLID S: Responsabilidad Única - Se encarga únicamente de la lógica de negocio financiera
+ * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
  */
 class FinanzasService {
+    /**
+     * Constructor del servicio de finanzas
+     * @param {Object} db - Instancia de la base de datos (MongoDB)
+     * 
+     * PATRÓN: Dependency Injection - Recibe las dependencias como parámetros
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones, no de implementaciones concretas
+     * BUENA PRÁCTICA: Inicialización de repositorios en el constructor para reutilización
+     */
     constructor(db) {
+        // PATRÓN: Repository - Abstrae el acceso a datos de pagos
+        // PRINCIPIO SOLID D: Depende de abstracción PagoRepository
         this.pagoRepository = new PagoRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos financieros
+        // PRINCIPIO SOLID D: Depende de abstracción FinanzasRepository
         this.finanzasRepository = new FinanzasRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de clientes
+        // PRINCIPIO SOLID D: Depende de abstracción ClienteRepository
         this.clienteRepository = new ClienteRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de contratos
+        // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
         this.contratoRepository = new ContratoRepository(db);
+        // Almacena la conexión a la base de datos para uso interno
         this.db = db;
     }
 
@@ -24,38 +50,65 @@ class FinanzasService {
      * @param {Object} pagoData - Datos del pago
      * @returns {Promise<ObjectId>} ID del pago creado
      * @throws {Error} Si hay error en la validación o creación
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de registro de pagos
+     * PATRÓN: Factory - Crea instancias de Pago y Finanzas
+     * PATRÓN: Strategy - Diferentes estrategias según tipo de pago
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de registrar pagos
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * 
+     * NOTA: No hay transacciones explícitas aquí, cada operación es independiente
+     * POSIBLE MEJORA: Implementar transacciones para garantizar consistencia
      */
     async registrarPago(pagoData) {
         try {
-            // Validar que el cliente existe si se proporciona
+            // ===== VALIDACIONES DE DEPENDENCIAS =====
+            // PATRÓN: Guard Clause - Validación temprana de dependencias
+            // PRINCIPIO SOLID S: Responsabilidad de validación de dependencias
             if (pagoData.clienteId) {
+                // PATRÓN: Repository - Consulta de existencia a través de abstracción
+                // PRINCIPIO SOLID D: Depende de abstracción ClienteRepository
                 const cliente = await this.clienteRepository.getById(pagoData.clienteId);
+                // PATRÓN: Guard Clause - Validación de existencia
                 if (!cliente) {
                     throw new Error('Cliente no encontrado');
                 }
+                // PATRÓN: Guard Clause - Validación de estado del cliente
                 if (!cliente.activo) {
                     throw new Error('Cliente inactivo');
                 }
             }
 
-            // Validar que el contrato existe si se proporciona
+            // PATRÓN: Guard Clause - Validación de dependencias de contrato
             if (pagoData.contratoId) {
+                // PATRÓN: Repository - Consulta de existencia a través de abstracción
+                // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
                 const contrato = await this.contratoRepository.getById(pagoData.contratoId);
+                // PATRÓN: Guard Clause - Validación de existencia
                 if (!contrato) {
                     throw new Error('Contrato no encontrado');
                 }
+                // PATRÓN: Guard Clause - Validación de estado del contrato
                 if (contrato.estaCancelado()) {
                     throw new Error('Contrato cancelado');
                 }
             }
 
-            // Crear instancia de Pago
+            // ===== CREACIÓN DE ENTIDAD DE DOMINIO =====
+            // PATRÓN: Factory - Creación de instancia de Pago
+            // PATRÓN: Domain Model - Uso de entidad de dominio con validaciones
+            // PRINCIPIO SOLID S: Delegación de responsabilidad de validación al modelo
             const pago = new Pago(pagoData);
 
-            // Insertar en la base de datos
+            // ===== PERSISTENCIA DEL PAGO =====
+            // PATRÓN: Repository - Abstrae la operación de inserción
+            // PRINCIPIO SOLID D: Depende de abstracción, no de implementación concreta
             const pagoId = await this.pagoRepository.create(pago);
 
-            // Si es un ingreso, también crear movimiento financiero
+            // ===== CREACIÓN DE MOVIMIENTO FINANCIERO OPCIONAL =====
+            // PATRÓN: Strategy - Diferentes estrategias según tipo de pago
+            // PATRÓN: Factory - Creación de instancia de Finanzas
+            // BUENA PRÁCTICA: Solo crear movimiento financiero para ingresos
             if (pago.esIngreso()) {
                 const { Finanzas } = require('../models');
                 const movimiento = new Finanzas({
@@ -67,11 +120,16 @@ class FinanzasService {
                     categoria: 'pago_cliente'
                 });
 
+                // PATRÓN: Repository - Abstrae la operación de inserción
+                // PRINCIPIO SOLID D: Depende de abstracción, no de implementación concreta
                 await this.finanzasRepository.create(movimiento);
             }
 
             return pagoId;
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Wrapping - Envuelve errores con contexto específico
+            // PRINCIPIO SOLID S: Responsabilidad de manejo de errores del método
             throw new Error(`Error al registrar pago: ${error.message}`);
         }
     }
@@ -177,14 +235,30 @@ class FinanzasService {
      * @param {string} referencia - Referencia del pago (opcional)
      * @param {string} notas - Notas adicionales (opcional)
      * @returns {Promise<boolean>} True si se actualizó correctamente
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de marcado de pago
+     * PATRÓN: Guard Clause - Validaciones tempranas
+     * PATRÓN: Strategy - Diferentes estrategias según tipo de pago
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de marcar pagos como pagados
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * 
+     * NOTA: No hay transacciones explícitas aquí, cada operación es independiente
+     * POSIBLE MEJORA: Implementar transacciones para garantizar consistencia
      */
     async marcarPagoComoPagado(pagoId, referencia = null, notas = null) {
         try {
+            // ===== VALIDACIÓN DE EXISTENCIA =====
+            // PATRÓN: Repository - Consulta de existencia a través de abstracción
+            // PRINCIPIO SOLID D: Depende de abstracción PagoRepository
             const pago = await this.pagoRepository.getById(pagoId);
+            // PATRÓN: Guard Clause - Validación temprana de existencia
             if (!pago) {
                 throw new Error('Pago no encontrado');
             }
 
+            // ===== VALIDACIONES DE ESTADO =====
+            // PATRÓN: Guard Clause - Validación de estado del pago
+            // PRINCIPIO SOLID S: Responsabilidad de validación de estado
             if (pago.estaPagado()) {
                 throw new Error('El pago ya está marcado como pagado');
             }
@@ -193,19 +267,28 @@ class FinanzasService {
                 throw new Error('No se puede marcar como pagado un pago cancelado');
             }
 
-            // Actualizar estado del pago
+            // ===== ACTUALIZACIÓN DEL PAGO =====
+            // PATRÓN: Repository - Abstrae la operación de actualización
+            // PRINCIPIO SOLID D: Depende de abstracción, no de implementación concreta
             const actualizado = await this.pagoRepository.marcarComoPagado(pagoId, referencia, notas);
 
-            // Si es un ingreso, actualizar también el movimiento financiero
+            // ===== ACTUALIZACIÓN DE MOVIMIENTO FINANCIERO OPCIONAL =====
+            // PATRÓN: Strategy - Diferentes estrategias según tipo de pago
+            // BUENA PRÁCTICA: Solo actualizar movimiento financiero para ingresos
             if (pago.esIngreso()) {
+                // PATRÓN: Repository - Consulta de movimientos relacionados
+                // PRINCIPIO SOLID D: Depende de abstracción FinanzasRepository
                 const movimientos = await this.finanzasRepository.getAll({
                     clienteId: pago.clienteId,
                     monto: pago.monto,
                     fecha: pago.fechaPago
                 });
 
+                // PATRÓN: Guard Clause - Validación de existencia de movimientos
                 if (movimientos.length > 0) {
                     const movimiento = movimientos[0];
+                    // PATRÓN: Repository - Abstrae la operación de actualización
+                    // PRINCIPIO SOLID D: Depende de abstracción, no de implementación concreta
                     await this.finanzasRepository.update(movimiento.movimientoId, {
                         descripcion: `Pago confirmado de ${pago.monto} - ${pago.metodoPago}${referencia ? ` (Ref: ${referencia})` : ''}`
                     });
@@ -214,6 +297,9 @@ class FinanzasService {
 
             return actualizado;
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Wrapping - Envuelve errores con contexto específico
+            // PRINCIPIO SOLID S: Responsabilidad de manejo de errores del método
             throw new Error(`Error al marcar pago como pagado: ${error.message}`);
         }
     }
@@ -534,29 +620,55 @@ class FinanzasService {
      * Elimina un pago (solo si no está asociado a contratos vigentes)
      * @param {string|ObjectId} pagoId - ID del pago a eliminar
      * @returns {Promise<boolean>} True si se eliminó correctamente
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de eliminación de pagos
+     * PATRÓN: Guard Clause - Validaciones tempranas
+     * PATRÓN: Strategy - Diferentes estrategias según estado del pago
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de eliminar pagos
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * 
+     * NOTA: No hay transacciones explícitas aquí, cada operación es independiente
+     * POSIBLE MEJORA: Implementar transacciones para garantizar consistencia
      */
     async eliminarPago(pagoId) {
         try {
+            // ===== VALIDACIÓN DE EXISTENCIA =====
+            // PATRÓN: Repository - Consulta de existencia a través de abstracción
+            // PRINCIPIO SOLID D: Depende de abstracción PagoRepository
             const pago = await this.pagoRepository.getById(pagoId);
+            // PATRÓN: Guard Clause - Validación temprana de existencia
             if (!pago) {
                 throw new Error('Pago no encontrado');
             }
 
-            // Verificar si el pago está asociado a un contrato vigente
+            // ===== VALIDACIÓN DE DEPENDENCIAS =====
+            // PATRÓN: Guard Clause - Validación de dependencias de contrato
+            // PRINCIPIO SOLID S: Responsabilidad de validación de dependencias
             if (pago.tieneContrato()) {
+                // PATRÓN: Repository - Consulta de estado del contrato
+                // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
                 const contrato = await this.contratoRepository.getById(pago.contratoId);
+                // PATRÓN: Guard Clause - Validación de estado del contrato
                 if (contrato && contrato.estaVigente()) {
                     throw new Error('No se puede eliminar un pago asociado a un contrato vigente');
                 }
             }
 
-            // Verificar si el pago ya está pagado
+            // ===== VALIDACIÓN DE ESTADO =====
+            // PATRÓN: Guard Clause - Validación de estado del pago
+            // PRINCIPIO SOLID S: Responsabilidad de validación de estado
             if (pago.estaPagado()) {
                 throw new Error('No se puede eliminar un pago ya confirmado');
             }
 
+            // ===== ELIMINACIÓN DEL PAGO =====
+            // PATRÓN: Repository - Abstrae la operación de eliminación
+            // PRINCIPIO SOLID D: Depende de abstracción, no de implementación concreta
             return await this.pagoRepository.delete(pagoId);
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Wrapping - Envuelve errores con contexto específico
+            // PRINCIPIO SOLID S: Responsabilidad de manejo de errores del método
             throw new Error(`Error al eliminar pago: ${error.message}`);
         }
     }
@@ -575,4 +687,7 @@ class FinanzasService {
     }
 }
 
+// ===== EXPORTACIÓN DEL MÓDULO =====
+// PATRÓN: Module Pattern - Exporta la clase como módulo
+// PRINCIPIO SOLID S: Responsabilidad de proporcionar la interfaz pública del servicio
 module.exports = FinanzasService;
