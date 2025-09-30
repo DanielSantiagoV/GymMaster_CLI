@@ -1,26 +1,65 @@
-const { ClienteRepository } = require('../repositories');
-const { PlanEntrenamientoRepository } = require('../repositories');
-const { SeguimientoRepository } = require('../repositories');
-const { NutricionRepository } = require('../repositories');
-const { ContratoRepository } = require('../repositories');
-const { FinanzasRepository } = require('../repositories');
-const { PagoRepository } = require('../repositories');
-const dayjs = require('dayjs');
+// ===== IMPORTS Y DEPENDENCIAS =====
+// Importación de repositorios para acceso a datos
+// PATRÓN: Dependency Injection - Se inyectan las dependencias a través del constructor
+// PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
+const { ClienteRepository } = require('../repositories'); // Repositorio para operaciones CRUD de clientes
+const { PlanEntrenamientoRepository } = require('../repositories'); // Repositorio para operaciones CRUD de planes de entrenamiento
+const { SeguimientoRepository } = require('../repositories'); // Repositorio para operaciones CRUD de seguimientos
+const { NutricionRepository } = require('../repositories'); // Repositorio para operaciones CRUD de planes nutricionales
+const { ContratoRepository } = require('../repositories'); // Repositorio para operaciones CRUD de contratos
+const { FinanzasRepository } = require('../repositories'); // Repositorio para operaciones CRUD de finanzas
+const { PagoRepository } = require('../repositories'); // Repositorio para operaciones CRUD de pagos
+const dayjs = require('dayjs'); // Utilidad para manejo de fechas y tiempo
 
 /**
  * Servicio de Reportes y Estadísticas
  * Orquesta la extracción y agregación de datos de todos los módulos
  * Aplica filtros, agrupaciones y cálculos estadísticos
+ * 
+ * PATRÓN: Service Layer - Capa de servicio que orquesta la generación de reportes
+ * PATRÓN: Facade - Proporciona una interfaz unificada para reportes de todos los módulos
+ * PATRÓN: Aggregator - Agrega datos de múltiples fuentes para generar reportes
+ * PATRÓN: Data Transfer Object (DTO) - Proporciona reportes estructurados
+ * PRINCIPIO SOLID S: Responsabilidad Única - Se encarga únicamente de la generación de reportes
+ * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevos tipos de reportes
+ * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
+ * 
+ * NOTA: Este servicio NO maneja transacciones ya que solo realiza consultas de lectura
+ * BUENA PRÁCTICA: Servicio especializado en generación de reportes y estadísticas
  */
 class ReportesService {
+    /**
+     * Constructor del servicio de reportes
+     * @param {Object} db - Instancia de la base de datos (MongoDB)
+     * 
+     * PATRÓN: Dependency Injection - Recibe las dependencias como parámetros
+     * PATRÓN: Repository - Inicializa todos los repositorios necesarios
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones, no de implementaciones concretas
+     * BUENA PRÁCTICA: Inicialización de repositorios en el constructor para reutilización
+     */
     constructor(db) {
+        // Almacena la conexión a la base de datos para uso interno
         this.db = db;
+        // PATRÓN: Repository - Abstrae el acceso a datos de clientes
+        // PRINCIPIO SOLID D: Depende de abstracción ClienteRepository
         this.clienteRepository = new ClienteRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de planes de entrenamiento
+        // PRINCIPIO SOLID D: Depende de abstracción PlanEntrenamientoRepository
         this.planRepository = new PlanEntrenamientoRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de seguimientos
+        // PRINCIPIO SOLID D: Depende de abstracción SeguimientoRepository
         this.seguimientoRepository = new SeguimientoRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de planes nutricionales
+        // PRINCIPIO SOLID D: Depende de abstracción NutricionRepository
         this.nutricionRepository = new NutricionRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de contratos
+        // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
         this.contratoRepository = new ContratoRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de finanzas
+        // PRINCIPIO SOLID D: Depende de abstracción FinanzasRepository
         this.finanzasRepository = new FinanzasRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de pagos
+        // PRINCIPIO SOLID D: Depende de abstracción PagoRepository
         this.pagoRepository = new PagoRepository(db);
     }
 
@@ -28,62 +67,113 @@ class ReportesService {
      * Obtiene estadísticas generales del sistema
      * @param {Object} filtros - Filtros opcionales
      * @returns {Promise<Object>} Estadísticas consolidadas
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de obtención de estadísticas
+     * PATRÓN: Aggregator - Agrega datos de múltiples fuentes
+     * PATRÓN: Data Transfer Object (DTO) - Retorna estadísticas estructuradas
+     * PATRÓN: Parallel Processing - Ejecuta consultas en paralelo
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de obtener estadísticas generales
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas estadísticas
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para estadísticas generales
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios)
+     * 
+     * NOTA: No hay transacciones ya que solo realiza consultas de lectura
+     * BUENA PRÁCTICA: Método principal que orquesta la obtención de estadísticas
      */
     async obtenerEstadisticasGenerales(filtros = {}) {
         try {
+            // ===== CONSULTAS PARALELAS =====
+            // PATRÓN: Parallel Processing - Ejecuta consultas en paralelo para optimizar rendimiento
+            // PATRÓN: Aggregator - Agrega datos de múltiples fuentes
+            // PRINCIPIO SOLID S: Responsabilidad de obtener datos de todas las fuentes
             const [
-                totalClientes,
-                clientesActivos,
-                totalPlanes,
-                planesActivos,
-                totalContratos,
-                contratosActivos,
-                totalSeguimientos,
-                totalPlanesNutricion,
-                planesNutricionActivos,
-                balanceFinanciero
+                totalClientes, // Total de clientes en el sistema
+                clientesActivos, // Clientes activos
+                totalPlanes, // Total de planes de entrenamiento
+                planesActivos, // Planes activos
+                totalContratos, // Total de contratos
+                contratosActivos, // Contratos activos
+                totalSeguimientos, // Total de seguimientos
+                totalPlanesNutricion, // Total de planes nutricionales
+                planesNutricionActivos, // Planes nutricionales activos
+                balanceFinanciero // Balance financiero del sistema
             ] = await Promise.all([
+                // PATRÓN: Repository - Consulta a través de abstracción
+                // PRINCIPIO SOLID D: Depende de abstracción ClienteRepository
                 this.clienteRepository.countClientes(),
                 this.clienteRepository.countClientes({ activo: true }),
+                // PATRÓN: Repository - Consulta a través de abstracción
+                // PRINCIPIO SOLID D: Depende de abstracción PlanEntrenamientoRepository
                 this.planRepository.countPlanes(),
                 this.planRepository.countPlanes({ estado: 'activo' }),
+                // PATRÓN: Repository - Consulta a través de abstracción
+                // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
                 this.contratoRepository.countContracts(),
                 this.contratoRepository.countContracts({ estado: 'vigente' }),
+                // PATRÓN: Repository - Consulta directa a la colección
+                // PRINCIPIO SOLID D: Depende de abstracción SeguimientoRepository
                 this.seguimientoRepository.collection.countDocuments(),
+                // PATRÓN: Repository - Consulta directa a la colección
+                // PRINCIPIO SOLID D: Depende de abstracción NutricionRepository
                 this.nutricionRepository.collection.countDocuments(),
                 this.nutricionRepository.collection.countDocuments({ estado: 'activo' }),
+                // PATRÓN: Strategy - Delegación de cálculo de balance
+                // PRINCIPIO SOLID S: Delegación de responsabilidad de balance financiero
                 this.obtenerBalanceFinanciero(filtros)
             ]);
 
+            // ===== CONSTRUCCIÓN DE ESTADÍSTICAS =====
+            // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas como objeto
+            // PATRÓN: Aggregator - Agrega datos de múltiples fuentes
+            // PRINCIPIO SOLID S: Responsabilidad de construir estadísticas consolidadas
             return {
+                // ===== ESTADÍSTICAS DE CLIENTES =====
+                // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas de clientes
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar estadísticas de clientes
                 clientes: {
-                    total: totalClientes,
-                    activos: clientesActivos,
-                    inactivos: totalClientes - clientesActivos,
-                    porcentajeActivos: totalClientes > 0 ? Math.round((clientesActivos / totalClientes) * 100) : 0
+                    total: totalClientes, // Total de clientes
+                    activos: clientesActivos, // Clientes activos
+                    inactivos: totalClientes - clientesActivos, // Clientes inactivos
+                    porcentajeActivos: totalClientes > 0 ? Math.round((clientesActivos / totalClientes) * 100) : 0 // Porcentaje de clientes activos
                 },
+                // ===== ESTADÍSTICAS DE PLANES =====
+                // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas de planes
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar estadísticas de planes
                 planes: {
-                    total: totalPlanes,
-                    activos: planesActivos,
-                    inactivos: totalPlanes - planesActivos,
-                    porcentajeActivos: totalPlanes > 0 ? Math.round((planesActivos / totalPlanes) * 100) : 0
+                    total: totalPlanes, // Total de planes
+                    activos: planesActivos, // Planes activos
+                    inactivos: totalPlanes - planesActivos, // Planes inactivos
+                    porcentajeActivos: totalPlanes > 0 ? Math.round((planesActivos / totalPlanes) * 100) : 0 // Porcentaje de planes activos
                 },
+                // ===== ESTADÍSTICAS DE CONTRATOS =====
+                // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas de contratos
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar estadísticas de contratos
                 contratos: {
-                    total: totalContratos,
-                    activos: contratosActivos,
-                    inactivos: totalContratos - contratosActivos,
-                    porcentajeActivos: totalContratos > 0 ? Math.round((contratosActivos / totalContratos) * 100) : 0
+                    total: totalContratos, // Total de contratos
+                    activos: contratosActivos, // Contratos activos
+                    inactivos: totalContratos - contratosActivos, // Contratos inactivos
+                    porcentajeActivos: totalContratos > 0 ? Math.round((contratosActivos / totalContratos) * 100) : 0 // Porcentaje de contratos activos
                 },
+                // ===== ESTADÍSTICAS DE SEGUIMIENTO =====
+                // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas de seguimiento
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar estadísticas de seguimiento
                 seguimiento: {
-                    totalRegistros: totalSeguimientos
+                    totalRegistros: totalSeguimientos // Total de registros de seguimiento
                 },
+                // ===== ESTADÍSTICAS DE NUTRICIÓN =====
+                // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas de nutrición
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar estadísticas de nutrición
                 nutricion: {
-                    total: totalPlanesNutricion,
-                    activos: planesNutricionActivos,
-                    inactivos: totalPlanesNutricion - planesNutricionActivos,
-                    porcentajeActivos: totalPlanesNutricion > 0 ? Math.round((planesNutricionActivos / totalPlanesNutricion) * 100) : 0
+                    total: totalPlanesNutricion, // Total de planes nutricionales
+                    activos: planesNutricionActivos, // Planes nutricionales activos
+                    inactivos: totalPlanesNutricion - planesNutricionActivos, // Planes nutricionales inactivos
+                    porcentajeActivos: totalPlanesNutricion > 0 ? Math.round((planesNutricionActivos / totalPlanesNutricion) * 100) : 0 // Porcentaje de planes nutricionales activos
                 },
-                finanzas: balanceFinanciero
+                // ===== ESTADÍSTICAS FINANCIERAS =====
+                // PATRÓN: Data Transfer Object (DTO) - Estructura estadísticas financieras
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar estadísticas financieras
+                finanzas: balanceFinanciero // Balance financiero del sistema
             };
         } catch (error) {
             throw new Error(`Error al obtener estadísticas generales: ${error.message}`);
@@ -690,39 +780,83 @@ class ReportesService {
      * @param {Array} datos - Datos a exportar
      * @param {Array} campos - Campos a incluir
      * @returns {string} CSV formateado
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de exportación CSV
+     * PATRÓN: Data Transfer Object (DTO) - Transforma datos a formato CSV
+     * PATRÓN: Mapper - Transforma datos de diferentes tipos a formato CSV
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de exportar datos a CSV
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevos tipos de datos
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para exportación CSV
+     * PRINCIPIO SOLID D: Inversión de Dependencias - No depende de implementaciones externas
+     * 
+     * NOTA: No hay transacciones ya que solo transforma datos
+     * BUENA PRÁCTICA: Método especializado en exportación de datos a formato CSV
      */
     exportarCSV(datos, campos) {
+        // ===== VALIDACIÓN DE DATOS =====
+        // PATRÓN: Guard Clause - Validación temprana de datos
+        // PRINCIPIO SOLID S: Responsabilidad de validar datos de entrada
         if (datos.length === 0) return '';
 
+        // ===== CONSTRUCCIÓN DE CABECERAS =====
+        // PATRÓN: Template Method - Define el formato estándar de CSV
+        // PRINCIPIO SOLID S: Responsabilidad de construir cabeceras
         const headers = campos.join(',');
+
+        // ===== TRANSFORMACIÓN DE DATOS =====
+        // PATRÓN: Mapper - Transforma datos de diferentes tipos a formato CSV
+        // PATRÓN: Iterator - Itera sobre todos los datos
+        // PRINCIPIO SOLID S: Responsabilidad de transformar cada fila de datos
         const rows = datos.map(item => 
             campos.map(campo => {
+                // ===== EXTRACCIÓN DE VALOR =====
+                // PATRÓN: Mapper - Extrae valor del campo
+                // PRINCIPIO SOLID S: Responsabilidad de extraer valor del campo
                 let valor = item[campo];
                 
-                // Manejar diferentes tipos de datos
+                // ===== TRANSFORMACIÓN DE TIPOS =====
+                // PATRÓN: Strategy - Diferentes estrategias según el tipo de dato
+                // PRINCIPIO SOLID S: Responsabilidad de transformar diferentes tipos de datos
                 if (valor === null || valor === undefined) {
-                    valor = '';
+                    valor = ''; // Valores nulos o indefinidos
                 } else if (valor instanceof Date) {
+                    // PATRÓN: Mapper - Transforma fechas a formato estándar
+                    // PRINCIPIO SOLID S: Responsabilidad de formatear fechas
                     valor = dayjs(valor).format('YYYY-MM-DD HH:mm:ss');
                 } else if (typeof valor === 'boolean') {
+                    // PATRÓN: Mapper - Transforma booleanos a texto
+                    // PRINCIPIO SOLID S: Responsabilidad de formatear booleanos
                     valor = valor ? 'Sí' : 'No';
                 } else if (typeof valor === 'object') {
+                    // PATRÓN: Mapper - Transforma objetos a JSON
+                    // PRINCIPIO SOLID S: Responsabilidad de formatear objetos
                     valor = JSON.stringify(valor);
                 } else {
+                    // PATRÓN: Mapper - Transforma otros tipos a string
+                    // PRINCIPIO SOLID S: Responsabilidad de formatear otros tipos
                     valor = valor.toString();
                 }
                 
-                // Escapar comillas y envolver en comillas si contiene comas, comillas o saltos de línea
+                // ===== ESCAPE DE CARACTERES ESPECIALES =====
+                // PATRÓN: Strategy - Diferentes estrategias según el contenido
+                // PRINCIPIO SOLID S: Responsabilidad de escapar caracteres especiales
                 if (typeof valor === 'string' && (valor.includes(',') || valor.includes('"') || valor.includes('\n') || valor.includes('\r'))) {
-                    return `"${valor.replace(/"/g, '""')}"`;
+                    return `"${valor.replace(/"/g, '""')}"`; // Escapar comillas y envolver en comillas
                 }
                 
                 return valor;
-            }).join(',')
+            }).join(',') // Unir campos con comas
         );
 
+        // ===== CONSTRUCCIÓN DEL CSV =====
+        // PATRÓN: Data Transfer Object (DTO) - Estructura CSV como string
+        // PRINCIPIO SOLID S: Responsabilidad de construir CSV final
         return [headers, ...rows].join('\n');
     }
 }
 
+// ===== EXPORTACIÓN DEL MÓDULO =====
+// PATRÓN: Module Pattern - Exporta la clase como módulo
+// PRINCIPIO SOLID S: Responsabilidad de proporcionar la interfaz pública del servicio
 module.exports = ReportesService;

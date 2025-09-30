@@ -1,12 +1,46 @@
 /**
  * Servicio de Plantillas Nutricionales - Proporciona plantillas predefinidas
  * para diferentes tipos de planes nutricionales
+ * 
+ * PATRÓN: Service Layer - Capa de servicio que proporciona plantillas nutricionales
+ * PATRÓN: Template Method - Define plantillas estándar para planes nutricionales
+ * PATRÓN: Registry - Registra y organiza plantillas nutricionales
+ * PATRÓN: Data Transfer Object (DTO) - Proporciona plantillas estructuradas
+ * PRINCIPIO SOLID S: Responsabilidad Única - Se encarga únicamente de proporcionar plantillas nutricionales
+ * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas plantillas sin modificar código existente
+ * PRINCIPIO SOLID D: Inversión de Dependencias - No depende de implementaciones externas
+ * 
+ * NOTA: Este servicio NO maneja transacciones ya que solo proporciona plantillas estáticas
+ * BUENA PRÁCTICA: Servicio especializado en plantillas nutricionales predefinidas
  */
 class PlantillasNutricionService {
+    /**
+     * Constructor del servicio de plantillas nutricionales
+     * 
+     * PATRÓN: Registry - Inicializa el registro de plantillas
+     * PATRÓN: Data Transfer Object (DTO) - Estructura plantillas como objetos
+     * PRINCIPIO SOLID S: Responsabilidad de inicializar plantillas nutricionales
+     * PRINCIPIO SOLID O: Extensible para nuevas plantillas
+     * BUENA PRÁCTICA: Inicialización de plantillas predefinidas en constructor
+     */
     constructor() {
+        // ===== REGISTRO DE PLANTILLAS NUTRICIONALES =====
+        // PATRÓN: Registry - Registra todas las plantillas disponibles
+        // PATRÓN: Data Transfer Object (DTO) - Estructura plantillas como objetos
+        // PRINCIPIO SOLID S: Responsabilidad de almacenar plantillas nutricionales
+        // PRINCIPIO SOLID O: Fácil agregar nuevas plantillas sin modificar código existente
         this.plantillas = {
+            // ===== PLANTILLA: PÉRDIDA DE PESO =====
+            // PATRÓN: Template Method - Define plantilla estándar para pérdida de peso
+            // PATRÓN: Data Transfer Object (DTO) - Estructura plantilla como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de proporcionar plantilla específica
+            // PRINCIPIO SOLID O: Extensible para personalizaciones
             perdida_peso: {
+                // Nombre descriptivo de la plantilla
                 nombre: 'Pérdida de Peso',
+                // Contenido detallado del plan nutricional
+                // PATRÓN: Template Method - Plantilla estándar para pérdida de peso
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar contenido específico
                 detallePlan: `PLAN NUTRICIONAL PARA PÉRDIDA DE PESO
 
 OBJETIVO: Reducir peso corporal de manera saludable y sostenible
@@ -75,8 +109,17 @@ SEGUIMIENTO:
 • Ajustes según progreso
 • Revisión cada 4-6 semanas`
             },
+            // ===== PLANTILLA: GANANCIA DE MASA MUSCULAR =====
+            // PATRÓN: Template Method - Define plantilla estándar para ganancia de masa
+            // PATRÓN: Data Transfer Object (DTO) - Estructura plantilla como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de proporcionar plantilla específica
+            // PRINCIPIO SOLID O: Extensible para personalizaciones
             ganancia_masa: {
+                // Nombre descriptivo de la plantilla
                 nombre: 'Ganancia de Masa Muscular',
+                // Contenido detallado del plan nutricional
+                // PATRÓN: Template Method - Plantilla estándar para ganancia de masa
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar contenido específico
                 detallePlan: `PLAN NUTRICIONAL PARA GANANCIA DE MASA MUSCULAR
 
 OBJETIVO: Aumentar masa muscular de manera eficiente y saludable
@@ -151,8 +194,17 @@ SEGUIMIENTO:
 • Fuerza y rendimiento
 • Ajustes según progreso`
             },
+            // ===== PLANTILLA: MANTENIMIENTO =====
+            // PATRÓN: Template Method - Define plantilla estándar para mantenimiento
+            // PATRÓN: Data Transfer Object (DTO) - Estructura plantilla como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de proporcionar plantilla específica
+            // PRINCIPIO SOLID O: Extensible para personalizaciones
             mantenimiento: {
+                // Nombre descriptivo de la plantilla
                 nombre: 'Mantenimiento',
+                // Contenido detallado del plan nutricional
+                // PATRÓN: Template Method - Plantilla estándar para mantenimiento
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar contenido específico
                 detallePlan: `PLAN NUTRICIONAL DE MANTENIMIENTO
 
 OBJETIVO: Mantener peso y composición corporal actual
@@ -224,8 +276,17 @@ SEGUIMIENTO:
 • Ajustes según cambios en estilo de vida
 • Revisión cada 3-6 meses`
             },
+            // ===== PLANTILLA: DEPORTIVO =====
+            // PATRÓN: Template Method - Define plantilla estándar para deportistas
+            // PATRÓN: Data Transfer Object (DTO) - Estructura plantilla como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de proporcionar plantilla específica
+            // PRINCIPIO SOLID O: Extensible para personalizaciones
             deportivo: {
+                // Nombre descriptivo de la plantilla
                 nombre: 'Deportivo',
+                // Contenido detallado del plan nutricional
+                // PATRÓN: Template Method - Plantilla estándar para deportistas
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar contenido específico
                 detallePlan: `PLAN NUTRICIONAL DEPORTIVO
 
 OBJETIVO: Optimizar rendimiento deportivo y recuperación
@@ -295,8 +356,17 @@ SEGUIMIENTO:
 • Recuperación entre sesiones
 • Ajustes según temporada`
             },
+            // ===== PLANTILLA: MÉDICO =====
+            // PATRÓN: Template Method - Define plantilla estándar para condiciones médicas
+            // PATRÓN: Data Transfer Object (DTO) - Estructura plantilla como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de proporcionar plantilla específica
+            // PRINCIPIO SOLID O: Extensible para personalizaciones
             medico: {
+                // Nombre descriptivo de la plantilla
                 nombre: 'Médico',
+                // Contenido detallado del plan nutricional
+                // PATRÓN: Template Method - Plantilla estándar para condiciones médicas
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar contenido específico
                 detallePlan: `PLAN NUTRICIONAL MÉDICO
 
 OBJETIVO: Tratamiento nutricional para condiciones médicas específicas
@@ -365,8 +435,17 @@ SEGUIMIENTO:
 • Ajustes según evolución
 • Coordinación multidisciplinaria`
             },
+            // ===== PLANTILLA: PERSONALIZADO =====
+            // PATRÓN: Template Method - Define plantilla estándar para planes personalizados
+            // PATRÓN: Data Transfer Object (DTO) - Estructura plantilla como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de proporcionar plantilla específica
+            // PRINCIPIO SOLID O: Extensible para personalizaciones
             personalizado: {
+                // Nombre descriptivo de la plantilla
                 nombre: 'Personalizado',
+                // Contenido detallado del plan nutricional
+                // PATRÓN: Template Method - Plantilla estándar para planes personalizados
+                // PRINCIPIO SOLID S: Responsabilidad de proporcionar contenido específico
                 detallePlan: `PLAN NUTRICIONAL PERSONALIZADO
 
 OBJETIVO: Plan adaptado a necesidades específicas del cliente
@@ -444,29 +523,83 @@ SEGUIMIENTO:
      * Obtiene la plantilla para un tipo de plan específico
      * @param {string} tipoPlan - Tipo de plan
      * @returns {Object} Plantilla del plan
+     * 
+     * PATRÓN: Registry - Busca plantilla en el registro
+     * PATRÓN: Data Transfer Object (DTO) - Retorna plantilla estructurada
+     * PATRÓN: Null Object - Retorna null si no encuentra la plantilla
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de obtener plantillas
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas plantillas
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para obtener plantilla
+     * PRINCIPIO SOLID D: Inversión de Dependencias - No depende de implementaciones externas
+     * 
+     * NOTA: No hay transacciones ya que solo accede a datos estáticos
+     * BUENA PRÁCTICA: Método simple y directo para obtener plantillas
      */
     getPlantilla(tipoPlan) {
+        // ===== BÚSQUEDA DE PLANTILLA =====
+        // PATRÓN: Registry - Busca plantilla en el registro
+        // PATRÓN: Null Object - Retorna null si no encuentra la plantilla
+        // PRINCIPIO SOLID S: Responsabilidad de obtener plantilla específica
+        // PRINCIPIO SOLID L: Comportamiento consistente - siempre retorna plantilla o null
         return this.plantillas[tipoPlan] || null;
     }
 
     /**
      * Obtiene todas las plantillas disponibles
      * @returns {Object} Todas las plantillas
+     * 
+     * PATRÓN: Registry - Retorna todo el registro de plantillas
+     * PATRÓN: Data Transfer Object (DTO) - Retorna plantillas estructuradas
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de obtener todas las plantillas
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas plantillas
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para obtener todas las plantillas
+     * PRINCIPIO SOLID D: Inversión de Dependencias - No depende de implementaciones externas
+     * 
+     * NOTA: No hay transacciones ya que solo accede a datos estáticos
+     * BUENA PRÁCTICA: Método simple para obtener todas las plantillas
      */
     getAllPlantillas() {
+        // ===== RETORNO DE TODAS LAS PLANTILLAS =====
+        // PATRÓN: Registry - Retorna todo el registro de plantillas
+        // PATRÓN: Data Transfer Object (DTO) - Retorna plantillas estructuradas
+        // PRINCIPIO SOLID S: Responsabilidad de obtener todas las plantillas
+        // PRINCIPIO SOLID L: Comportamiento consistente - siempre retorna el objeto de plantillas
         return this.plantillas;
     }
 
     /**
      * Obtiene la lista de tipos de planes disponibles
      * @returns {Array} Lista de tipos de planes
+     * 
+     * PATRÓN: Registry - Obtiene claves del registro de plantillas
+     * PATRÓN: Data Transfer Object (DTO) - Retorna lista estructurada
+     * PATRÓN: Mapper - Transforma claves a objetos con value y name
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de obtener tipos de planes
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas plantillas
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para obtener tipos
+     * PRINCIPIO SOLID D: Inversión de Dependencias - No depende de implementaciones externas
+     * 
+     * NOTA: No hay transacciones ya que solo accede a datos estáticos
+     * BUENA PRÁCTICA: Método que transforma claves a formato útil para UI
      */
     getTiposPlanes() {
+        // ===== TRANSFORMACIÓN DE CLAVES A OBJETOS =====
+        // PATRÓN: Registry - Obtiene claves del registro de plantillas
+        // PATRÓN: Mapper - Transforma claves a objetos con value y name
+        // PATRÓN: Data Transfer Object (DTO) - Retorna lista estructurada
+        // PRINCIPIO SOLID S: Responsabilidad de transformar claves a formato útil
+        // PRINCIPIO SOLID L: Comportamiento consistente - siempre retorna array de objetos
         return Object.keys(this.plantillas).map(key => ({
-            value: key,
-            name: this.plantillas[key].nombre
+            value: key, // Clave de la plantilla
+            name: this.plantillas[key].nombre // Nombre descriptivo de la plantilla
         }));
     }
 }
 
+// ===== EXPORTACIÓN DEL MÓDULO =====
+// PATRÓN: Module Pattern - Exporta la clase como módulo
+// PRINCIPIO SOLID S: Responsabilidad de proporcionar la interfaz pública del servicio
 module.exports = PlantillasNutricionService;

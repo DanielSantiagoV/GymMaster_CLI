@@ -1,19 +1,43 @@
-const { ObjectId } = require('mongodb');
-const { PlanEntrenamiento } = require('../models');
-const PlanEntrenamientoRepository = require('../repositories/PlanEntrenamientoRepository');
-const ClienteRepository = require('../repositories/ClienteRepository');
-const ContratoRepository = require('../repositories/ContratoRepository');
+// ===== IMPORTS Y DEPENDENCIAS =====
+// Importación de utilidades y modelos de dominio
+// PATRÓN: Dependency Injection - Se inyectan las dependencias a través del constructor
+// PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
+const { ObjectId } = require('mongodb'); // Utilidad para manejo de IDs de MongoDB
+const { PlanEntrenamiento } = require('../models'); // Modelo de dominio para entidad PlanEntrenamiento
+const PlanEntrenamientoRepository = require('../repositories/PlanEntrenamientoRepository'); // Repositorio para operaciones CRUD de planes de entrenamiento
+const ClienteRepository = require('../repositories/ClienteRepository'); // Repositorio para operaciones CRUD de clientes
+const ContratoRepository = require('../repositories/ContratoRepository'); // Repositorio para operaciones CRUD de contratos
 
 /**
  * Servicio para gestión de planes de entrenamiento
  * Implementa lógica de negocio para planes siguiendo principios SOLID
  * Maneja validaciones, transacciones y coordinación con otros módulos
+ * 
+ * PATRÓN: Service Layer - Capa de servicio que orquesta la lógica de negocio de planes de entrenamiento
+ * PATRÓN: Facade - Proporciona una interfaz simplificada para operaciones complejas de planes
+ * PRINCIPIO SOLID S: Responsabilidad Única - Se encarga únicamente de la lógica de negocio de planes de entrenamiento
+ * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
  */
 class PlanEntrenamientoService {
+    /**
+     * Constructor del servicio de planes de entrenamiento
+     * @param {Object} db - Instancia de la base de datos (MongoDB)
+     * 
+     * PATRÓN: Dependency Injection - Recibe las dependencias como parámetros
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones, no de implementaciones concretas
+     * BUENA PRÁCTICA: Inicialización de repositorios en el constructor para reutilización
+     */
     constructor(db) {
+        // Almacena la conexión a la base de datos para uso interno
         this.db = db;
+        // PATRÓN: Repository - Abstrae el acceso a datos de planes de entrenamiento
+        // PRINCIPIO SOLID D: Depende de abstracción PlanEntrenamientoRepository
         this.planRepository = new PlanEntrenamientoRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de clientes
+        // PRINCIPIO SOLID D: Depende de abstracción ClienteRepository
         this.clienteRepository = new ClienteRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de contratos
+        // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
         this.contratoRepository = new ContratoRepository(db);
     }
 
@@ -21,33 +45,55 @@ class PlanEntrenamientoService {
      * Crea un nuevo plan de entrenamiento
      * @param {Object} dataPlan - Datos del plan a crear
      * @returns {Promise<Object>} Resultado de la operación
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de creación de planes
+     * PATRÓN: Factory - Crea instancias de PlanEntrenamiento
+     * PATRÓN: Data Transfer Object (DTO) - Retorna objeto estructurado
+     * PATRÓN: Guard Clause - Validaciones tempranas
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de crear planes de entrenamiento
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * 
+     * NOTA: No hay transacciones explícitas aquí, cada operación es independiente
+     * POSIBLE MEJORA: Implementar transacciones para garantizar consistencia
      */
     async crearPlan(dataPlan) {
         try {
-            // Validar datos requeridos
+            // ===== VALIDACIÓN DE DATOS =====
+            // PATRÓN: Template Method - Delegación de validaciones específicas
+            // PRINCIPIO SOLID S: Separación de responsabilidades - validación delegada
             this.validarDatosPlan(dataPlan);
 
-            // Crear instancia del plan
+            // ===== CREACIÓN DE ENTIDAD DE DOMINIO =====
+            // PATRÓN: Factory - Creación de instancia de PlanEntrenamiento
+            // PATRÓN: Domain Model - Uso de entidad de dominio con validaciones
+            // PRINCIPIO SOLID S: Delegación de responsabilidad de validación al modelo
             const plan = new PlanEntrenamiento({
-                nombre: dataPlan.nombre,
-                duracionSemanas: dataPlan.duracionSemanas,
-                metasFisicas: dataPlan.metasFisicas,
-                nivel: dataPlan.nivel,
-                clientes: dataPlan.clientes || [],
-                estado: dataPlan.estado || 'activo'
+                nombre: dataPlan.nombre, // Nombre del plan
+                duracionSemanas: dataPlan.duracionSemanas, // Duración en semanas
+                metasFisicas: dataPlan.metasFisicas, // Metas físicas del plan
+                nivel: dataPlan.nivel, // Nivel del plan (principiante, intermedio, avanzado)
+                clientes: dataPlan.clientes || [], // Lista de clientes (inicialmente vacía)
+                estado: dataPlan.estado || 'activo' // Estado del plan (por defecto activo)
             });
 
-            // Crear en la base de datos
+            // ===== PERSISTENCIA =====
+            // PATRÓN: Repository - Abstrae la operación de inserción
+            // PRINCIPIO SOLID D: Depende de abstracción, no de implementación concreta
             const planId = await this.planRepository.create(plan);
 
+            // ===== CONSTRUCCIÓN DE RESPUESTA =====
+            // PATRÓN: Data Transfer Object (DTO) - Objeto estructurado para transferencia
             return {
-                success: true,
-                planId,
-                mensaje: 'Plan de entrenamiento creado exitosamente',
-                data: plan.getResumen()
+                success: true, // Indicador de éxito de la operación
+                planId, // ID del plan creado
+                mensaje: 'Plan de entrenamiento creado exitosamente', // Mensaje descriptivo
+                data: plan.getResumen() // Resumen del plan creado
             };
 
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Wrapping - Envuelve errores con contexto específico
+            // PRINCIPIO SOLID S: Responsabilidad de manejo de errores del método
             throw new Error(`Error al crear plan: ${error.message}`);
         }
     }
@@ -618,4 +664,7 @@ class PlanEntrenamientoService {
     }
 }
 
+// ===== EXPORTACIÓN DEL MÓDULO =====
+// PATRÓN: Module Pattern - Exporta la clase como módulo
+// PRINCIPIO SOLID S: Responsabilidad de proporcionar la interfaz pública del servicio
 module.exports = PlanEntrenamientoService;

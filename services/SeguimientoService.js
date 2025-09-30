@@ -1,21 +1,54 @@
-const { ObjectId } = require('mongodb');
-const { Seguimiento } = require('../models');
-const SeguimientoRepository = require('../repositories/SeguimientoRepository');
-const ClienteRepository = require('../repositories/ClienteRepository');
-const ContratoRepository = require('../repositories/ContratoRepository');
-const ProgresoService = require('./ProgresoService');
+// ===== IMPORTS Y DEPENDENCIAS =====
+// Importación de utilidades de MongoDB
+// PATRÓN: Dependency Injection - Se inyectan las dependencias a través del constructor
+// PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
+const { ObjectId } = require('mongodb'); // Utilidad para manejo de ObjectIds de MongoDB
+const { Seguimiento } = require('../models'); // Modelo de dominio para seguimientos
+const SeguimientoRepository = require('../repositories/SeguimientoRepository'); // Repositorio para operaciones CRUD de seguimientos
+const ClienteRepository = require('../repositories/ClienteRepository'); // Repositorio para operaciones CRUD de clientes
+const ContratoRepository = require('../repositories/ContratoRepository'); // Repositorio para operaciones CRUD de contratos
+const ProgresoService = require('./ProgresoService'); // Servicio para análisis de progreso físico
 
 /**
  * Servicio para gestión de seguimientos físicos
  * Implementa lógica de negocio para seguimientos siguiendo principios SOLID
  * Maneja validaciones, transacciones y coordinación con otros módulos
+ * 
+ * PATRÓN: Service Layer - Capa de servicio que orquesta la gestión de seguimientos
+ * PATRÓN: Facade - Proporciona una interfaz unificada para operaciones de seguimiento
+ * PATRÓN: Transaction - Maneja transacciones para operaciones críticas
+ * PATRÓN: Data Transfer Object (DTO) - Proporciona seguimientos estructurados
+ * PRINCIPIO SOLID S: Responsabilidad Única - Se encarga únicamente de la gestión de seguimientos
+ * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas funcionalidades de seguimiento
+ * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios) no de implementaciones concretas
+ * 
+ * NOTA: Este servicio SÍ maneja transacciones para operaciones críticas
+ * BUENA PRÁCTICA: Servicio especializado en gestión de seguimientos físicos
  */
 class SeguimientoService {
+    /**
+     * Constructor del servicio de seguimientos
+     * @param {Object} db - Instancia de la base de datos (MongoDB)
+     * 
+     * PATRÓN: Dependency Injection - Recibe las dependencias como parámetros
+     * PATRÓN: Repository - Inicializa todos los repositorios necesarios
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones, no de implementaciones concretas
+     * BUENA PRÁCTICA: Inicialización de repositorios en el constructor para reutilización
+     */
     constructor(db) {
+        // Almacena la conexión a la base de datos para uso interno
         this.db = db;
+        // PATRÓN: Repository - Abstrae el acceso a datos de seguimientos
+        // PRINCIPIO SOLID D: Depende de abstracción SeguimientoRepository
         this.seguimientoRepository = new SeguimientoRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de clientes
+        // PRINCIPIO SOLID D: Depende de abstracción ClienteRepository
         this.clienteRepository = new ClienteRepository(db);
+        // PATRÓN: Repository - Abstrae el acceso a datos de contratos
+        // PRINCIPIO SOLID D: Depende de abstracción ContratoRepository
         this.contratoRepository = new ContratoRepository(db);
+        // PATRÓN: Service Layer - Servicio para análisis de progreso
+        // PRINCIPIO SOLID D: Depende de abstracción ProgresoService
         this.progresoService = new ProgresoService();
     }
 
@@ -23,41 +56,70 @@ class SeguimientoService {
      * Crea un nuevo seguimiento con validaciones de negocio
      * @param {Object} datosSeguimiento - Datos del seguimiento a crear
      * @returns {Promise<Object>} Resultado de la operación
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de creación de seguimientos
+     * PATRÓN: Transaction - Maneja transacciones para operaciones críticas
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona seguimientos estructurados
+     * PATRÓN: Guard Clause - Validaciones tempranas
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de crear seguimientos
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para creación
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios)
+     * 
+     * TRANSACCIONES: SÍ implementa transacciones MongoDB para operaciones críticas
+     * BUENA PRÁCTICA: Método principal que orquesta la creación de seguimientos
      */
     async crearSeguimiento(datosSeguimiento) {
         try {
-            // Validar que cliente y contrato existen y están activos
+            // ===== VALIDACIÓN DE CLIENTE =====
+            // PATRÓN: Guard Clause - Validación temprana de existencia del cliente
+            // PRINCIPIO SOLID S: Responsabilidad de validar datos de entrada
             const cliente = await this.clienteRepository.getById(datosSeguimiento.clienteId);
             if (!cliente) {
                 throw new Error('Cliente no encontrado');
             }
 
+            // PATRÓN: Guard Clause - Validación de estado del cliente
+            // PRINCIPIO SOLID S: Responsabilidad de validar reglas de negocio
             if (!cliente.activo) {
                 throw new Error('Solo se pueden crear seguimientos para clientes activos');
             }
 
-            // Validar que el contrato existe y está vigente
+            // ===== VALIDACIÓN DE CONTRATO =====
+            // PATRÓN: Guard Clause - Validación temprana de existencia del contrato
+            // PRINCIPIO SOLID S: Responsabilidad de validar datos de entrada
             const contrato = await this.contratoRepository.getById(datosSeguimiento.contratoId);
             if (!contrato) {
                 throw new Error('Contrato no encontrado');
             }
 
+            // PATRÓN: Guard Clause - Validación de estado del contrato
+            // PRINCIPIO SOLID S: Responsabilidad de validar reglas de negocio
             if (contrato.estado !== 'vigente') {
                 throw new Error('Solo se pueden crear seguimientos para contratos vigentes');
             }
 
-            // Validar que el contrato pertenece al cliente
+            // PATRÓN: Guard Clause - Validación de relación cliente-contrato
+            // PRINCIPIO SOLID S: Responsabilidad de validar reglas de negocio
             if (contrato.clienteId.toString() !== datosSeguimiento.clienteId.toString()) {
                 throw new Error('El contrato no pertenece al cliente especificado');
             }
 
-            // Validar fechas
+            // ===== VALIDACIÓN DE FECHAS =====
+            // PATRÓN: Strategy - Delegación de validación de fechas
+            // PRINCIPIO SOLID S: Delegación de responsabilidad de validación
             this.validarFechasSeguimiento(datosSeguimiento.fecha);
 
-            // Validar datos físicos
+            // ===== VALIDACIÓN DE DATOS FÍSICOS =====
+            // PATRÓN: Strategy - Delegación de validación de datos físicos
+            // PRINCIPIO SOLID S: Delegación de responsabilidad de validación
             this.validarDatosFisicos(datosSeguimiento);
 
-            // Crear instancia del seguimiento
+            // ===== CREACIÓN DE INSTANCIA DEL SEGUIMIENTO =====
+            // PATRÓN: Factory - Crea instancia del modelo de dominio
+            // PATRÓN: Data Transfer Object (DTO) - Estructura seguimiento como objeto
+            // PRINCIPIO SOLID S: Responsabilidad de crear instancia del seguimiento
             const seguimiento = new Seguimiento({
                 clienteId: datosSeguimiento.clienteId,
                 contratoId: datosSeguimiento.contratoId,
@@ -69,45 +131,69 @@ class SeguimientoService {
                 comentarios: datosSeguimiento.comentarios || ''
             });
 
-            // Intentar usar transacciones si están disponibles
+            // ===== IMPLEMENTACIÓN DE TRANSACCIONES =====
+            // PATRÓN: Transaction - Maneja transacciones para operaciones críticas
+            // PRINCIPIO SOLID S: Responsabilidad de garantizar consistencia atómica
             try {
+                // ===== INICIO DE TRANSACCIÓN =====
+                // PATRÓN: Transaction - Inicia sesión de transacción
+                // BUENA PRÁCTICA: Transacciones para garantizar consistencia atómica
                 const session = this.db.client.startSession();
                 
                 try {
                     let resultado;
                     
+                    // ===== EJECUCIÓN DE TRANSACCIÓN =====
+                    // PATRÓN: Transaction - Todas las operaciones en una transacción
+                    // PRINCIPIO SOLID S: Responsabilidad de garantizar consistencia
                     await session.withTransaction(async () => {
-                        // 1. Crear el seguimiento
+                        // ===== OPERACIÓN 1: CREAR SEGUIMIENTO =====
+                        // PATRÓN: Repository - Abstrae la operación de creación
+                        // BUENA PRÁCTICA: Crear seguimiento en base de datos
                         const seguimientoId = await this.seguimientoRepository.create(seguimiento);
 
-                        // 2. Actualizar estadísticas del cliente si es necesario
+                        // ===== OPERACIÓN 2: ACTUALIZAR ESTADÍSTICAS =====
+                        // PATRÓN: Strategy - Delegación de actualización de estadísticas
+                        // BUENA PRÁCTICA: Mantener estadísticas actualizadas
                         await this.actualizarEstadisticasCliente(datosSeguimiento.clienteId);
 
+                        // ===== CONSTRUCCIÓN DE RESPUESTA =====
+                        // PATRÓN: Data Transfer Object (DTO) - Objeto estructurado para transferencia
                         resultado = {
-                            success: true,
-                            seguimientoId: seguimientoId,
-                            mensaje: 'Seguimiento creado exitosamente'
+                            success: true, // Indicador de éxito de la operación
+                            seguimientoId: seguimientoId, // ID del seguimiento creado
+                            mensaje: 'Seguimiento creado exitosamente' // Mensaje descriptivo
                         };
                     });
 
                     return resultado;
                 } finally {
+                    // ===== FIN DE TRANSACCIÓN =====
+                    // BUENA PRÁCTICA: Siempre cerrar la sesión
                     await session.endSession();
                 }
             } catch (transactionError) {
-                // Si las transacciones no están disponibles, crear sin transacción
+                // ===== FALLBACK SIN TRANSACCIONES =====
+                // PATRÓN: Fallback - Estrategia alternativa cuando transacciones no están disponibles
+                // PRINCIPIO SOLID S: Responsabilidad de manejar fallos de transacciones
                 console.log('⚠️ Transacciones no disponibles, creando sin transacción...');
                 
-                // 1. Crear el seguimiento
+                // ===== OPERACIÓN 1: CREAR SEGUIMIENTO =====
+                // PATRÓN: Repository - Abstrae la operación de creación
+                // BUENA PRÁCTICA: Crear seguimiento sin transacción
                 const seguimientoId = await this.seguimientoRepository.create(seguimiento);
 
-                // 2. Actualizar estadísticas del cliente si es necesario
+                // ===== OPERACIÓN 2: ACTUALIZAR ESTADÍSTICAS =====
+                // PATRÓN: Strategy - Delegación de actualización de estadísticas
+                // BUENA PRÁCTICA: Mantener estadísticas actualizadas
                 await this.actualizarEstadisticasCliente(datosSeguimiento.clienteId);
 
+                // ===== CONSTRUCCIÓN DE RESPUESTA =====
+                // PATRÓN: Data Transfer Object (DTO) - Objeto estructurado para transferencia
                 return {
-                    success: true,
-                    seguimientoId: seguimientoId,
-                    mensaje: 'Seguimiento creado exitosamente'
+                    success: true, // Indicador de éxito de la operación
+                    seguimientoId: seguimientoId, // ID del seguimiento creado
+                    mensaje: 'Seguimiento creado exitosamente' // Mensaje descriptivo
                 };
             }
 
@@ -330,63 +416,107 @@ class SeguimientoService {
      * Elimina un seguimiento
      * @param {string|ObjectId} seguimientoId - ID del seguimiento
      * @returns {Promise<Object>} Resultado de la operación
+     * 
+     * PATRÓN: Template Method - Define el flujo estándar de eliminación de seguimientos
+     * PATRÓN: Transaction - Maneja transacciones para operaciones críticas
+     * PATRÓN: Rollback - Implementa rollback para operaciones de eliminación
+     * PATRÓN: Data Transfer Object (DTO) - Proporciona resultados estructurados
+     * PATRÓN: Guard Clause - Validaciones tempranas
+     * PRINCIPIO SOLID S: Responsabilidad Única - Solo se encarga de eliminar seguimientos
+     * PRINCIPIO SOLID O: Abierto/Cerrado - Extensible para nuevas validaciones
+     * PRINCIPIO SOLID L: Sustitución de Liskov - Comportamiento consistente
+     * PRINCIPIO SOLID I: Segregación de Interfaces - Método específico para eliminación
+     * PRINCIPIO SOLID D: Inversión de Dependencias - Depende de abstracciones (repositorios)
+     * 
+     * TRANSACCIONES: SÍ implementa transacciones MongoDB para operaciones críticas
+     * BUENA PRÁCTICA: Método principal que orquesta la eliminación de seguimientos
      */
     async eliminarSeguimiento(seguimientoId) {
         try {
+            // ===== VALIDACIÓN DE EXISTENCIA =====
+            // PATRÓN: Guard Clause - Validación temprana de existencia del seguimiento
+            // PRINCIPIO SOLID S: Responsabilidad de validar datos de entrada
             const seguimiento = await this.seguimientoRepository.getById(seguimientoId);
             if (!seguimiento) {
                 throw new Error('Seguimiento no encontrado');
             }
 
-            // Intentar usar transacciones si están disponibles
+            // ===== IMPLEMENTACIÓN DE TRANSACCIONES =====
+            // PATRÓN: Transaction - Maneja transacciones para operaciones críticas
+            // PRINCIPIO SOLID S: Responsabilidad de garantizar consistencia atómica
             try {
+                // ===== INICIO DE TRANSACCIÓN =====
+                // PATRÓN: Transaction - Inicia sesión de transacción
+                // BUENA PRÁCTICA: Transacciones para garantizar consistencia atómica
                 const session = this.db.client.startSession();
                 
                 try {
                     let resultado;
                     
+                    // ===== EJECUCIÓN DE TRANSACCIÓN =====
+                    // PATRÓN: Transaction - Todas las operaciones en una transacción
+                    // PRINCIPIO SOLID S: Responsabilidad de garantizar consistencia
                     await session.withTransaction(async () => {
-                        // 1. Eliminar el seguimiento con rollback
+                        // ===== OPERACIÓN 1: ELIMINAR SEGUIMIENTO CON ROLLBACK =====
+                        // PATRÓN: Rollback - Implementa rollback para operaciones de eliminación
+                        // BUENA PRÁCTICA: Eliminar seguimiento con capacidad de rollback
                         const eliminado = await this.seguimientoRepository.deleteFollowUpWithRollback(seguimientoId);
 
                         if (!eliminado) {
                             throw new Error('No se pudo eliminar el seguimiento');
                         }
 
-                        // 2. Actualizar estadísticas del cliente
+                        // ===== OPERACIÓN 2: ACTUALIZAR ESTADÍSTICAS =====
+                        // PATRÓN: Strategy - Delegación de actualización de estadísticas
+                        // BUENA PRÁCTICA: Mantener estadísticas actualizadas
                         await this.actualizarEstadisticasCliente(seguimiento.clienteId);
 
+                        // ===== CONSTRUCCIÓN DE RESPUESTA =====
+                        // PATRÓN: Data Transfer Object (DTO) - Objeto estructurado para transferencia
                         resultado = {
-                            success: true,
-                            mensaje: 'Seguimiento eliminado exitosamente'
+                            success: true, // Indicador de éxito de la operación
+                            mensaje: 'Seguimiento eliminado exitosamente' // Mensaje descriptivo
                         };
                     });
 
                     return resultado;
                 } finally {
+                    // ===== FIN DE TRANSACCIÓN =====
+                    // BUENA PRÁCTICA: Siempre cerrar la sesión
                     await session.endSession();
                 }
             } catch (transactionError) {
-                // Si las transacciones no están disponibles, eliminar sin transacción
+                // ===== FALLBACK SIN TRANSACCIONES =====
+                // PATRÓN: Fallback - Estrategia alternativa cuando transacciones no están disponibles
+                // PRINCIPIO SOLID S: Responsabilidad de manejar fallos de transacciones
                 console.log('⚠️ Transacciones no disponibles, eliminando sin transacción...');
                 
-                // 1. Eliminar el seguimiento
+                // ===== OPERACIÓN 1: ELIMINAR SEGUIMIENTO =====
+                // PATRÓN: Repository - Abstrae la operación de eliminación
+                // BUENA PRÁCTICA: Eliminar seguimiento sin transacción
                 const eliminado = await this.seguimientoRepository.delete(seguimientoId);
 
                 if (!eliminado) {
                     throw new Error('No se pudo eliminar el seguimiento');
                 }
 
-                // 2. Actualizar estadísticas del cliente
+                // ===== OPERACIÓN 2: ACTUALIZAR ESTADÍSTICAS =====
+                // PATRÓN: Strategy - Delegación de actualización de estadísticas
+                // BUENA PRÁCTICA: Mantener estadísticas actualizadas
                 await this.actualizarEstadisticasCliente(seguimiento.clienteId);
 
+                // ===== CONSTRUCCIÓN DE RESPUESTA =====
+                // PATRÓN: Data Transfer Object (DTO) - Objeto estructurado para transferencia
                 return {
-                    success: true,
-                    mensaje: 'Seguimiento eliminado exitosamente'
+                    success: true, // Indicador de éxito de la operación
+                    mensaje: 'Seguimiento eliminado exitosamente' // Mensaje descriptivo
                 };
             }
 
         } catch (error) {
+            // ===== MANEJO DE ERRORES =====
+            // PATRÓN: Error Wrapping - Envuelve errores con contexto específico
+            // PRINCIPIO SOLID S: Responsabilidad de manejo de errores del método
             throw new Error(`Error al eliminar seguimiento: ${error.message}`);
         }
     }
@@ -595,4 +725,7 @@ class SeguimientoService {
     }
 }
 
+// ===== EXPORTACIÓN DEL MÓDULO =====
+// PATRÓN: Module Pattern - Exporta la clase como módulo
+// PRINCIPIO SOLID S: Responsabilidad de proporcionar la interfaz pública del servicio
 module.exports = SeguimientoService;
