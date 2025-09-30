@@ -1304,6 +1304,12 @@ class ProgresoService {
 
 Este proyecto fue desarrollado siguiendo la metodología Scrum, una framework ágil que promueve la colaboración, la adaptabilidad y la entrega iterativa de valor. El equipo trabajó en sprints cortos con reuniones diarias, planificación de sprints y retrospectivas para garantizar la calidad y eficiencia del desarrollo.
 
+#### 📄 **Documentación Scrum Completa**
+- **[📋 Documentación Scrum Detallada](docs/DocumentacionScrum_GestionGimnasio.pdf)** - Documento completo con toda la metodología Scrum aplicada al proyecto
+
+#### 🎥 **Explicación Técnica del Proyecto**
+- **[🎥 Video Explicación Técnica](https://youtu.be/JavPdqFgY-E)** - Video detallado con la explicación técnica completa del sistema
+
 ### 👥 Roles del Equipo Scrum
 
 #### 🎯 Product Owner
@@ -3473,6 +3479,12 @@ class FinanzasService {
 ### 📋 Documento de Planeación Scrum
 
 Este proyecto fue desarrollado siguiendo la metodología Scrum, una framework ágil que promueve la colaboración, la adaptabilidad y la entrega iterativa de valor. El equipo trabajó en sprints cortos con reuniones diarias, planificación de sprints y retrospectivas para garantizar la calidad y eficiencia del desarrollo.
+
+#### 📄 **Documentación Scrum Completa**
+- **[📋 Documentación Scrum Detallada](docs/DocumentacionScrum_GestionGimnasio.pdf)** - Documento completo con toda la metodología Scrum aplicada al proyecto
+
+#### 🎥 **Explicación Técnica del Proyecto**
+- **[🎥 Video Explicación Técnica](https://youtu.be/JavPdqFgY-E)** - Video detallado con la explicación técnica completa del sistema
 
 ### 👥 Roles del Equipo Scrum
 
