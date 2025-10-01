@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "timestamp": "2025-10-01T07-36-46",
+    "tipo": "completo",
+    "version": "1.0.0",
+    "colecciones": [
+      "clientes",
+      "contratos",
+      "finanzas",
+      "nutricion",
+      "planesentrenamiento",
+      "seguimiento",
+      "pagos"
+    ]
+  },
+  "datos": {
+    "clientes": [
+      {
+        "_id": "68dd16588dc503984100c5cd",
+        "nombre": "daniel",
+        "apellido": "vinacso",
+        "email": "vinasco@gmail.com",
+        "telefono": "12345678901",
+        "fechaRegistro": "2025-10-01T11:54:00.630Z",
+        "activo": true,
+        "planes": []
+      }
+    ],
+    "contratos": [],
+    "finanzas": [],
+    "nutricion": [],
+    "planesentrenamiento": [],
+    "seguimiento": [],
+    "pagos": []
+  }
+}

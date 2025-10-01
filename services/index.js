@@ -62,6 +62,10 @@ const FinanzasService = require('./FinanzasService');
 // PATRÓN: Service Layer - Capa de servicio para lógica de negocio de reportes
 const ReportesService = require('./ReportesService');
 
+// Servicio para backup y restore
+// PATRÓN: Service Layer - Capa de servicio para lógica de negocio de backup y restore
+const BackupService = require('./BackupService');
+
 // ===== EXPORTACIÓN DE SERVICIOS =====
 // PATRÓN: Module Pattern - Exporta un objeto con todos los servicios
 // PATRÓN: Registry - Registra todos los servicios disponibles
@@ -92,5 +96,7 @@ module.exports = {
     // Servicio financiero
     FinanzasService,
     // Servicio de reportes
-    ReportesService
+    ReportesService,
+    // Servicio de backup y restore
+    BackupService
 };
