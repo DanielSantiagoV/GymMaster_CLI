@@ -482,6 +482,39 @@ class PlanEntrenamientoService {
     }
 
     /**
+     * Obtiene un plan por ID
+     * @param {string|ObjectId} planId - ID del plan
+     * @returns {Promise<Object>} Plan encontrado
+     */
+    async obtenerPlanPorId(planId) {
+        try {
+            const plan = await this.planRepository.getById(planId);
+            
+            if (!plan) {
+                return {
+                    success: false,
+                    mensaje: 'Plan no encontrado'
+                };
+            }
+
+            return {
+                success: true,
+                data: {
+                    planId: plan.planId,
+                    nombre: plan.nombre,
+                    duracionSemanas: plan.duracionSemanas,
+                    metasFisicas: plan.metasFisicas,
+                    nivel: plan.nivel,
+                    estado: plan.estado,
+                    fechaCreacion: plan.fechaCreacion
+                }
+            };
+        } catch (error) {
+            throw new Error(`Error al obtener plan: ${error.message}`);
+        }
+    }
+
+    /**
      * Valida los datos de un plan
      * @param {Object} dataPlan - Datos del plan
      * @param {boolean} esActualizacion - Si es una actualización

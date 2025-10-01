@@ -8,6 +8,7 @@ const NutricionCLI = require('./NutricionCLI');
 const FinanzasCLI = require('./FinanzasCLI');
 const ReportesCLI = require('./ReportesCLI');
 const ConfigCLI = require('./ConfigCLI');
+const ProgresoCLI = require('./ProgresoCLI');
 
 /**
  * Menú Principal del Sistema GymMaster CLI
@@ -24,6 +25,7 @@ class MenuPrincipal {
         this.finanzasCLI = new FinanzasCLI(db);
         this.reportesCLI = new ReportesCLI(db);
         this.configCLI = new ConfigCLI(db);
+        this.progresoCLI = new ProgresoCLI(db);
     }
 
     /**
@@ -75,6 +77,10 @@ class MenuPrincipal {
                         value: 'reportes'
                     },
                     {
+                        name: '📊 Generar Reportes de Progreso',
+                        value: 'progreso'
+                    },
+                    {
                         name: '⚙️  Configuración',
                         value: 'configuracion'
                     },
@@ -120,6 +126,11 @@ class MenuPrincipal {
             case 'reportes':
                 await this.reportesCLI.mostrarMenuReportes();
                 // Volver al menú principal después de gestionar reportes
+                await this.mostrarMenuPrincipal();
+                break;
+            case 'progreso':
+                await this.progresoCLI.mostrarMenuProgreso();
+                // Volver al menú principal después de gestionar progreso
                 await this.mostrarMenuPrincipal();
                 break;
             case 'configuracion':

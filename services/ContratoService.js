@@ -581,6 +581,35 @@ class ContratoService {
     }
 
     /**
+     * Obtiene todos los contratos de un cliente específico
+     * @param {string|ObjectId} clienteId - ID del cliente
+     * @returns {Promise<Object>} Lista de contratos del cliente
+     */
+    async obtenerContratosPorCliente(clienteId) {
+        try {
+            const contratos = await this.contratoRepository.getContractsByClient(clienteId);
+            
+            return {
+                success: true,
+                data: contratos.map(contrato => ({
+                    contratoId: contrato.contratoId,
+                    planId: contrato.planId,
+                    estado: contrato.estado,
+                    fechaInicio: contrato.fechaInicio,
+                    fechaFin: contrato.fechaFin,
+                    precio: contrato.precio,
+                    duracionMeses: contrato.duracionMeses,
+                    condiciones: contrato.condiciones || '',
+                    fechaCreacion: contrato.fechaCreacion
+                })),
+                total: contratos.length
+            };
+        } catch (error) {
+            throw new Error(`Error al obtener contratos del cliente: ${error.message}`);
+        }
+    }
+
+    /**
      * Valida las fechas de un contrato
      * @param {Date} fechaInicio - Fecha de inicio
      * @param {Date} fechaFin - Fecha de fin
